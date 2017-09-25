@@ -1,0 +1,154 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0 
+xmax = 59.28312925170068 
+tiers? <exists> 
+size = 1 
+item []: 
+    item [1]:
+        class = "IntervalTier" 
+        name = "Call" 
+        xmin = 0 
+        xmax = 59.28312925170068 
+        intervals: size = 35 
+        intervals [1]:
+            xmin = 0 
+            xmax = 0.198487156837684 
+            text = "" 
+        intervals [2]:
+            xmin = 0.198487156837684 
+            xmax = 0.41482153344648265 
+            text = "W" 
+        intervals [3]:
+            xmin = 0.41482153344648265 
+            xmax = 2.4955102052440576 
+            text = "" 
+        intervals [4]:
+            xmin = 2.4955102052440576 
+            xmax = 2.689968071350727 
+            text = "W" 
+        intervals [5]:
+            xmin = 2.689968071350727 
+            xmax = 5.081473029267988 
+            text = "" 
+        intervals [6]:
+            xmin = 5.081473029267988 
+            xmax = 5.261346555416656 
+            text = "W" 
+        intervals [7]:
+            xmin = 5.261346555416656 
+            xmax = 8.664322808276623 
+            text = "" 
+        intervals [8]:
+            xmin = 8.664322808276623 
+            xmax = 8.82718126997842 
+            text = "K" 
+        intervals [9]:
+            xmin = 8.82718126997842 
+            xmax = 10.493734816272564 
+            text = "" 
+        intervals [10]:
+            xmin = 10.493734816272564 
+            xmax = 10.656593277974359 
+            text = "W" 
+        intervals [11]:
+            xmin = 10.656593277974359 
+            xmax = 13.078474476928276 
+            text = "" 
+        intervals [12]:
+            xmin = 13.078474476928276 
+            xmax = 13.231610045394143 
+            text = "W" 
+        intervals [13]:
+            xmin = 13.231610045394143 
+            xmax = 17.798892034648265 
+            text = "" 
+        intervals [14]:
+            xmin = 17.798892034648265 
+            xmax = 18.124608955726774 
+            text = "W+" 
+        intervals [15]:
+            xmin = 18.124608955726774 
+            xmax = 20.676519225914834 
+            text = "" 
+        intervals [16]:
+            xmin = 20.676519225914834 
+            xmax = 21.014389746568643 
+            text = "K+" 
+        intervals [17]:
+            xmin = 21.014389746568643 
+            xmax = 22.785153033774204 
+            text = "" 
+        intervals [18]:
+            xmin = 22.785153033774204 
+            xmax = 22.98812578927491 
+            text = "W" 
+        intervals [19]:
+            xmin = 22.98812578927491 
+            xmax = 27.266741603597442 
+            text = "" 
+        intervals [20]:
+            xmin = 27.266741603597442 
+            xmax = 27.633780802293305 
+            text = "K+" 
+        intervals [21]:
+            xmin = 27.633780802293305 
+            xmax = 32.37333244617936 
+            text = "" 
+        intervals [22]:
+            xmin = 32.37333244617936 
+            xmax = 32.77197103185935 
+            text = "K+" 
+        intervals [23]:
+            xmin = 32.77197103185935 
+            xmax = 36.85615545198273 
+            text = "" 
+        intervals [24]:
+            xmin = 36.85615545198273 
+            xmax = 37.23291752991199 
+            text = "K+" 
+        intervals [25]:
+            xmin = 37.23291752991199 
+            xmax = 40.79843523974012 
+            text = "" 
+        intervals [26]:
+            xmin = 40.79843523974012 
+            xmax = 41.1630437022523 
+            text = "K+" 
+        intervals [27]:
+            xmin = 41.1630437022523 
+            xmax = 44.69090353609598 
+            text = "" 
+        intervals [28]:
+            xmin = 44.69090353609598 
+            xmax = 45.045789106274505 
+            text = "K+" 
+        intervals [29]:
+            xmin = 45.045789106274505 
+            xmax = 48.66509366447686 
+            text = "" 
+        intervals [30]:
+            xmin = 48.66509366447686 
+            xmax = 49.017548511571974 
+            text = "K+" 
+        intervals [31]:
+            xmin = 49.017548511571974 
+            xmax = 54.102262373092 
+            text = "" 
+        intervals [32]:
+            xmin = 54.102262373092 
+            xmax = 54.449855774020286 
+            text = "K+" 
+        intervals [33]:
+            xmin = 54.449855774020286 
+            xmax = 58.43077761794793 
+            text = "" 
+        intervals [34]:
+            xmin = 58.43077761794793 
+            xmax = 58.746771614280476 
+            text = "K+" 
+        intervals [35]:
+            xmin = 58.746771614280476 
+            xmax = 59.28312925170068 
+            text = "" 
