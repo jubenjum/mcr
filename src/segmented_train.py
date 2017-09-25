@@ -4,6 +4,10 @@
 
 from __future__ import division
 
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import operator
 from pprint import pformat
 

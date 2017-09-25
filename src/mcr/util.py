@@ -8,6 +8,7 @@ from contextlib import contextmanager
 import string
 from itertools import product, tee
 from math import ceil, log
+from functools import partial
 
 import numpy as np
 import scipy.io.wavfile
