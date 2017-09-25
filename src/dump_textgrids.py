@@ -41,12 +41,14 @@ def dump_textgrid2csv(grid_file):
 		# all empty texts are decoded as silences
 		elif 'text' in l:
 		    text = re.match("text = \"(.*)\"", l).groups()[0]
-		    text = 'SIL' if not text else text
+                    text = ' '.join(text.split())
+                    if not text or text == ' ':
+                        text = 'SIL'
 		else:
 		    pass
 
 		if xmin and xmax and text:
-		    print("{},{:.5f},{:.5f},{}".format(grid_, 
+		    print("{},{:.3f},{:.3f},{}".format(grid_, 
                         float(xmin), float(xmax), text))
 		    decode_int = False
 
