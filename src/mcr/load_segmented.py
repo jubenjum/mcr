@@ -65,34 +65,50 @@ class IdentityTransform(TransformerMixin, BaseEstimator):
 
 
 class FeatureLoader(TransformerMixin, BaseEstimator):
-    def __init__(self,
-                 stacksize=40,
-                 normalize='mvn',
-                 n_noise_fr=0,
-                 fs=16000,
-                 window_length=0.050,
-                 window_shift=0.010,
-                 nfft=1024,
-                 scale='mel',
-                 lowerf=120,
-                 upperf=7000,
-                 nfilt=40,
-                 taper_filt=True,
-                 compression='log',
-                 dct=False,
-                 nceps=13,
-                 log_e=True,
-                 lifter=22,
-                 deltas=False,
-                 remove_dc=False,
-                 medfilt_t=0,
-                 medfilt_s=(0, 0),
-                 noise_fr=0,
-                 pre_emph=0.97,
-                 feat_cache=None, noise_cache=None, wav_cache=None,
-                 n_jobs=1, verbose=False):
-        self.stacksize = stacksize
-        self.normalize = normalize
+    ''' FeatureLoader '''
+
+    # TODO: encoder_vars should be build from a configuration file 
+    # encoder_vars are the variables that the class Spectral uses
+    encoder_vars = ['fs', 'window_length', 'window_shift',
+            'nfft', 'lowerf', 'upperf', 'nfilt',
+            'taper_filt', 'dct', 'nceps',
+            'log_e', 'lifter', 'deltas', 'remove_dc',
+            'medfilt_t', 'medfilt_s', 'noise_fr', 'pre_emph']
+
+    feat_param = {'stacksize':40,
+                  'normalize':'mvn',
+                  'n_noise_fr':0,
+                  'fs':16000,
+                  'window_length':0.050,
+                  'window_shift':0.010,
+                  'nfft':1024,
+                  'scale':'mel',
+                  'lowerf':120,
+                  'upperf':7000,
+                  'nfilt':40,
+                  'taper_filt':True,
+                  'compression':'log',
+                  'dct':False,
+                  'nceps':13,
+                  'log_e':True,
+                  'lifter':22,
+                  'deltas':False,
+                  'remove_dc':False,
+                  'medfilt_t':0,
+                  'medfilt_s':(0, 0),
+                  'noise_fr':0,
+                  'pre_emph':0.97,
+                  'feat_cache': {}, 'noise_cache': {}, 'wav_cache': {},
+                  'n_jobs':1, 'verbose':False}
+
+    def __init__(self, encoder=Spectral, **kwargs):
+         
+        # update the class attributes and should contain 
+        # the attributes of needed by the encoder
+        if kwargs:
+            self.feat_param.update(kwargs) # the parameters used by the encoder
+        self.__dict__.update(self.feat_param)
+
         if self.normalize == 'mvn':
             self.normalizer = StandardScaler()
         elif self.normalize == 'zca':
@@ -101,57 +117,21 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
             self.normalizer = MinMaxScaler()
         else:
             self.normalizer = IdentityTransform()
-        self.n_noise_fr = n_noise_fr
-        self.fs = fs
-        self.window_length = window_length
-        self.window_shift = window_shift
-        self.nfft = nfft
-        self.scale = scale
-        self.lowerf = lowerf
-        self.upperf = upperf
-        self.nfilt = nfilt
-        self.taper_filt = taper_filt
-        self.compression = compression
-        self.dct = dct
-        self.nceps = nceps
-        self.log_e = log_e
-        self.lifter = lifter
-        self.deltas = deltas
-        self.remove_dc = remove_dc
-        self.medfilt_t = medfilt_t
-        self.medfilt_s = medfilt_s
-        self.noise_fr = noise_fr
-        self.pre_emph = pre_emph
-
-        self.n_jobs = n_jobs
-        self.verbose = verbose
-
-        self.encoder = Spectral(
-            fs=fs,
-            window_length=window_length,
-            window_shift=window_shift,
-            nfft=nfft,
-            scale=scale,
-            lowerf=lowerf,
-            upperf=upperf,
-            nfilt=nfilt,
-            taper_filt=taper_filt,
-            compression=compression,
-            dct=dct,
-            nceps=nceps,
-            log_e=log_e,
-            lifter=lifter,
-            deltas=deltas,
-            remove_dc=remove_dc,
-            medfilt_t=medfilt_t,
-            medfilt_s=medfilt_s,
-            noise_fr=noise_fr,
-            pre_emph=pre_emph
-        )
+        
+        # self.feat_param should have the right attributes
+        encoder_attr_ = []
+        for var_name, var_value in self.feat_param.items():
+            if var_name in self.encoder_vars:
+                if isinstance(var_value, str):
+                    encoder_attr_.append("{0}='{1}'".format(var_name, var_value))
+                else:
+                    encoder_attr_.append("{0}={1}".format(var_name, var_value))
+        
+        # dynamically build and run the encoder with its defined attributes
+        _encoder_args = ', '.join([str(w) for w in encoder_attr_])
+        _encoder_comm = "self.encoder = encoder({})".format(_encoder_args)
+        exec(_encoder_comm)
         self.D = self.encoder.n_features * self.stacksize
-        self.wav_cache = wav_cache if wav_cache else {}
-        self.noise_cache = noise_cache if noise_cache else {}
-        self.feat_cache = feat_cache if feat_cache else {}
 
     def clear_cache(self):
         self.wav_cache = {}
@@ -159,7 +139,8 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         self.feat_cache = {}
 
     def get_params(self, deep=True):
-        p = super(FeatureLoader, self).get_params()
+        #p = super(FeatureLoader, self).get_params()
+	p = self.__dict__
         del p['n_jobs']
         del p['verbose']
         return p
@@ -235,6 +216,7 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         key = self.get_key()
         # list of [(filename, start)]
         X_keys = [(X[ix, 0], X[ix, 1]) for ix in xrange(X.shape[0])]
+ 
         if key in self.feat_cache:
             # check for missing keys
             missing_X_keys = [
@@ -246,6 +228,7 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         else:
             self.feat_cache[key] = {}
             self._fill_feat_cache(X_keys)
+        
         return np.vstack((self.feat_cache[key][x_key] for x_key in X_keys))
 
     def fit(self, X, y=None):
