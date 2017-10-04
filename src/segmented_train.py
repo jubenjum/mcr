@@ -99,17 +99,19 @@ if __name__ == '__main__':
     with verb_print('preloading audio', verbose=verbose):
         n_iter = reduce(operator.mul, map(len, features_params.values()))
         fl = mcr.load_segmented.FeatureLoader()
-        for fname in X[:, 0]:
-            fl._load_wav(fname)
-        wav_cache = fl.wav_cache
-
+        
+        wav_cache = {}
         feat_cache = {}
         noise_cache = {}
+
+        # wav files must be sampled at 16000Hz
+        for fname in X[:, 0]:
+            wav_cache[fname] = mcr.load_segmented.load_wav(fname)
+
         for ix, params in enumerate(ParameterGrid(features_params)):
             # print 'combination {}/{}'.format(ix, n_iter)
-            # print params
-            fl = mcr.load_segmented.FeatureLoader(verbose=5, n_jobs=n_jobs,
-                                             wav_cache=wav_cache, **params)
+            fl.actualize_data(verbose=5, n_jobs=n_jobs,
+                              wav_cache=wav_cache, **params)
             fl._fill_noise_cache(X)
             noise_cache.update(fl.noise_cache)
             fl.get_specs(X)

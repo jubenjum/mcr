@@ -20,6 +20,23 @@ from zca import ZCA
 from util import wavread
 
 
+
+## helper functions for the FeatureLoader class
+def load_wav(fname, fs=16000):
+    """ audio loader """
+
+    sig, found_fs = wavread(fname)
+    if fs != found_fs:
+        raise ValueError('sampling rate should be {0}, not {1}. '
+                         'please resample.'.format(fs, found_fs))
+    
+    if len(sig.shape) > 1:
+        warnings.warn('stereo audio: merging channels')
+        sig = (sig[:, 0] + sig[:, 1]) / 2
+    
+    return sig 
+
+
 # this function goes with FeatureLoader but is defined outside it,
 # because I cannot get the parallellization to work on instance methods
 def extract_features_at(sig, noise, start, stacksize, encoder,
@@ -98,8 +115,9 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
                   'medfilt_s':(0, 0),
                   'noise_fr':0,
                   'pre_emph':0.97,
-                  'feat_cache': {}, 'noise_cache': {}, 'wav_cache': {},
                   'n_jobs':1, 'verbose':False}
+
+    CACHE = ['feat_cache', 'noise_cache', 'wav_cache'] 
 
     def __init__(self, encoder=Spectral, **kwargs):
          
@@ -119,6 +137,7 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
             self.normalizer = IdentityTransform()
         
         # self.feat_param should have the right attributes
+        # that will be used to create the encoder arguments
         encoder_attr_ = []
         for var_name, var_value in self.feat_param.items():
             if var_name in self.encoder_vars:
@@ -130,8 +149,26 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         # dynamically build and run the encoder with its defined attributes
         _encoder_args = ', '.join([str(w) for w in encoder_attr_])
         _encoder_comm = "self.encoder = encoder({})".format(_encoder_args)
+
         exec(_encoder_comm)
+
+        if not hasattr(self, 'feat_cache'):
+            setattr(self, 'feat_cache', {})
+       
+        if not hasattr(self, 'noise_cache'):       
+            setattr(self, 'noise_cache', {})
+ 
+        if not hasattr(self, 'wav_cache'):
+            setattr(self, 'wav_cache', {})
+
         self.D = self.encoder.n_features * self.stacksize
+   
+    def actualize_data(self, **kwargs):
+        '''actualize the data inside FeatureLoader class, including
+        caches and internal class variables'''
+         
+        if kwargs:
+            self.__dict__.update(kwargs)
 
     def clear_cache(self):
         self.wav_cache = {}
@@ -140,9 +177,8 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
 
     def get_params(self, deep=True):
         #p = super(FeatureLoader, self).get_params()
-	p = self.__dict__
-        del p['n_jobs']
-        del p['verbose']
+        REMOVED_PARAM = ['n_jobs', 'verbose']
+        p = {k:v for k, v in self.__dict__.items() if k not in REMOVED_PARAM}
         return p
 
     def get_key(self):
@@ -150,26 +186,17 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         Used as key in caching.
         """
         p = self.get_params()
-        del p['wav_cache']
-        del p['noise_cache']
-        del p['feat_cache']
-        return tuple(sorted(p.items()))
+        encoder_param = tuple(sorted((k, v) for k, v in p.items() if k not in self.CACHE))
+        return encoder_param 
 
     def _load_wav(self, fname):
         """
         Memoized audio loader.
         """
-        key = fname
-        if not key in self.wav_cache:
-            sig, fs_ = wavread(fname)
-            if self.fs != fs_:
-                raise ValueError('sampling rate should be {0}, not {1}. '
-                                 'please resample.'.format(self.fs, fs_))
-            if len(sig.shape) > 1:
-                warnings.warn('stereo audio: merging channels')
-                sig = (sig[:, 0] + sig[:, 1]) / 2
-            self.wav_cache[key] = sig
-        return self.wav_cache[key]
+        if not fname in self.wav_cache:
+            self.wav_cache[fname] = load_wav(fname, fs=self.fs)
+        
+        return self.wav_cache[fname]
 
     def _fill_noise_cache(self, X):
         for fname in X[:, 0]:
@@ -187,6 +214,7 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
             ('pre_emph', self.pre_emph)
         )
         key = (fname, cfg)
+        
         if not key in self.noise_cache:
             if self.n_noise_fr == 0:
                 self.noise_cache[key] = None
@@ -207,29 +235,32 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
                 sig, noise, start, self.stacksize, self.encoder)
             for (fname, start), sig, noise in izip(X_keys, sigs, noises)
         )
-        r = {x_key: feat
-             for x_key, feat in izip(X_keys, p)}
+        r = {x_key: feat for x_key, feat in izip(X_keys, p)}
         key = self.get_key()
         self.feat_cache[key].update(r)
 
     def get_specs(self, X):
-        key = self.get_key()
+        #p = self.get_params()
+        #class_attributes = tuple(sorted(p.items())) 
+        class_attributes = self.get_key()
+
         # list of [(filename, start)]
         X_keys = [(X[ix, 0], X[ix, 1]) for ix in xrange(X.shape[0])]
- 
-        if key in self.feat_cache:
+        
+        # feat_cache must have the same attributes that the class
+        if class_attributes in self.feat_cache:
             # check for missing keys
             missing_X_keys = [
                 x_key
                 for x_key in X_keys
-                if not x_key in self.feat_cache[key]
+                if not x_key in self.feat_cache[class_attributes]
             ]
             self._fill_feat_cache(missing_X_keys)
         else:
-            self.feat_cache[key] = {}
+            self.feat_cache[class_attributes] = {}
             self._fill_feat_cache(X_keys)
         
-        return np.vstack((self.feat_cache[key][x_key] for x_key in X_keys))
+        return np.vstack((self.feat_cache[class_attributes][x_key] for x_key in X_keys))
 
     def fit(self, X, y=None):
         """Load audio and optionally estimate mean and covar
@@ -242,7 +273,7 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         """
         r = self.get_specs(X)
         self.normalizer.fit(r)
-        return self
+        #return self
 
     def transform(self, X, y=None):
         """Load audio and perform feature extraction.
