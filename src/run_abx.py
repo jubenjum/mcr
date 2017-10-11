@@ -22,7 +22,8 @@ def dtw_cosine_distance(x, y, normalized):
     return dtw.dtw(x, y, cosine.cosine_distance, normalized)
 
 
-def fullrun(data_file, verbose=False, distance=cosine_distance):
+def run_abx(data_file, verbose=False, distance=dtw_cosine_distance):
+    ''' wrap ABXpy funcions and compute the scores '''
     item_file = '{}.item'.format(data_file)
     feature_file = '{}.features'.format(data_file)
     distance_file = '{}.distance'.format(data_file)
@@ -30,22 +31,7 @@ def fullrun(data_file, verbose=False, distance=cosine_distance):
     taskfilename = '{}.abx'.format(data_file)
     analyzefilename = '{}.csv'.format(data_file)
 
-    # deleting pre-existing files
-    for f in [item_file, feature_file, distance_file,
-              scorefilename, taskfilename, analyzefilename]:
-        try:
-            os.remove(f)
-        except OSError:
-            pass
-
-    # running the evaluation:
-    base=3
-    n=3
-    repeats=1
-    n_feats=2
-    max_frames=2
-
-    items.generate_db_and_feat(base, n, repeats, item_file, n_feats, max_frames, feature_file)
+    # running the evaluation
     task = ABXpy.task.Task(item_file, 'call')
     task.generate_triplets(taskfilename)
     distances.compute_distances(feature_file, '/features/', taskfilename,
@@ -53,8 +39,6 @@ def fullrun(data_file, verbose=False, distance=cosine_distance):
                                 normalized = True, n_cpu=1)
     score.score(taskfilename, distance_file, scorefilename)
     analyze.analyze(taskfilename, scorefilename, analyzefilename)
-
-
 
 
 if __name__ == '__main__':
@@ -79,4 +63,4 @@ if __name__ == '__main__':
 
     data_file = args['datafile'][0]
     verbose = args['verbose']
-    fullrun(data_file)
+    run_abx(data_file)

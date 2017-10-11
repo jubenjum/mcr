@@ -5,34 +5,29 @@ source activate mcr
 #
 ## remove outputs
 #
-#rm -rf trained.clf predicted.csv data/train_annotations.csv data/test_annotations.csv
-rm -rf data.features data.item
+rm -rf trained.clf predicted.csv data/train_annotations.csv data/test_annotations.csv
+rm -rf data.features data.item data.distance data.score data.abx data.csv
+
+
 
 #
 ## preparing data
 #
 
-##echo "Preparing data"
-##cd data
-##
-### extracting annotations
-##rm *.csv
-##./prep_annot.sh
-##
-### fixing sampling rate
-##for i in *.WAV; do
-##    f=$(basename $i .WAV);
-##    sox -t wav $i -e signed-integer -b 16 -c 1 -r 16000 ${f}.wav;
-##done
-##
-##cd -
+echo "Preparing data"
+cd data
 
-#
-## create ABX files
-#
+# extracting annotations
+rm *.csv
+./prep_annot.sh
 
-python ./src/prepare_abx.py  data/train_annotations.csv src/segmented.cfg trained.clf
+# fixing sampling rate
+for i in *.WAV; do
+    f=$(basename $i .WAV);
+    sox -t wav $i -e signed-integer -b 16 -c 1 -r 16000 ${f}.wav;
+done
 
+cd -
 
 #
 ## training
@@ -49,10 +44,16 @@ python ./src/prepare_abx.py  data/train_annotations.csv src/segmented.cfg traine
 ##
 #python src/segmented_eval.py data/test_annotations.csv predicted.csv
 
+
+
+#
+## create ABX files
+#
+
+python ./src/prepare_abx.py  data/train_annotations.csv src/segmented.cfg trained.clf
+
+
 source activate zerospeech
-
 python ./src/run_abx.py data
-
-
 source deactivate 
 
