@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source activate mcr
+
 #
 ## remove outputs
 #
@@ -47,6 +49,10 @@ python ./src/prepare_abx.py  data/train_annotations.csv src/segmented.cfg traine
 ##
 #python src/segmented_eval.py data/test_annotations.csv predicted.csv
 
+source activate zerospeech
+
+python ./src/run_abx.py data
 
 
+source deactivate 
 

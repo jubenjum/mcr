@@ -117,7 +117,7 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
     times = []
     files = []
     with open(item_file, 'w') as ifile:
-        ifile.write("#file onset offset #call") 
+        ifile.write("#file onset offset #call\n") 
         for n, (file_description, features_selection)   in enumerate(data_features.iteritems()):
             audio_file, start_audio = file_description
 
@@ -137,7 +137,6 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
                 selected_annot['label'].values[0]))
 
     labels = list(times)
-    print(labels)
     data = h5f.Data(files, labels, all_features, check=False)
     h5_features = h5f.Writer(features_file)
     h5_features.write(data, 'features')
