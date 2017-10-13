@@ -38,9 +38,6 @@ if __name__ == '__main__':
         parser.add_argument('config', metavar='CONFIG',
                             nargs=1,
                             help='configuration file')
-        parser.add_argument('output', metavar='OUTPUT',
-                            nargs=1,
-                            help='output file')
         parser.add_argument('-v', '--verbose',
                             action='store_true',
                             dest='verbose',
@@ -52,7 +49,6 @@ if __name__ == '__main__':
 
     data_file = args['datafile'][0]
     config_file = args['config'][0]
-    output_file = args['output'][0]
     verbose = args['verbose']
 
     ###### ANNOTATIONS

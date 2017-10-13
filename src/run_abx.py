@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import os.path
 import sys
 package_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if not(package_path in sys.path):
@@ -14,15 +15,19 @@ import ABXpy.score as score
 import ABXpy.misc.items as items
 import ABXpy.analyze as analyze
 
+import scipy.spatial.distance
 
-def cosine_distance(x, y):
-    return cosine.cosine_distance(x, y)
+
+
+def cosine_distance(x, y, normalized):
+    return scipy.spatial.distance.cosine(x, y)
+    #return scipy.spatial.distance.correlation(x, y)
 
 def dtw_cosine_distance(x, y, normalized):
     return dtw.dtw(x, y, cosine.cosine_distance, normalized)
 
 
-def run_abx(data_file, verbose=False, distance=dtw_cosine_distance):
+def run_abx(data_file, verbose=False, distance=cosine_distance):
     ''' wrap ABXpy funcions and compute the scores '''
     item_file = '{}.item'.format(data_file)
     feature_file = '{}.features'.format(data_file)
@@ -30,6 +35,10 @@ def run_abx(data_file, verbose=False, distance=dtw_cosine_distance):
     scorefilename = '{}.score'.format(data_file)
     taskfilename = '{}.abx'.format(data_file)
     analyzefilename = '{}.csv'.format(data_file)
+
+    # clean up before compute ABX
+    remove_files = [distance_file, scorefilename, taskfilename, analyzefilename]
+    map(os.remove, filter(os.path.exists, remove_files))
 
     # running the evaluation
     task = ABXpy.task.Task(item_file, 'call')

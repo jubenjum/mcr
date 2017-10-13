@@ -1,3 +1,12 @@
 *.ipynb
 *.pyc
 src/resources/
+TODO.md
+*.abx
+*.csv
+*.distance
+*.features
+*.item
+*.score
+*.csv
+

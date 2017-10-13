@@ -127,8 +127,9 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
 
             v_ = np.array([features_selection.flatten()])
             all_features.append(v_.T)
-            times.append(np.array([float(selected_annot['start']), 
-                float(selected_annot['end'])]))
+            times.append(float(selected_annot['start']) + 0.5*(float(selected_annot['end']) -
+                         float(selected_annot['start']))
+                         )
             bname = '{}_{:04}'.format(os.path.basename(audio_file), n)
             files.append(bname)
             ifile.write("{} {} {} {}\n".format(bname,
@@ -136,7 +137,7 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
                 float(selected_annot['end']),
                 selected_annot['label'].values[0]))
 
-    labels = list(times)
+    labels = list(np.array([times]))
     data = h5f.Data(files, labels, all_features, check=False)
     h5_features = h5f.Writer(features_file)
     h5_features.write(data, 'features')

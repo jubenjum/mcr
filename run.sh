@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 source activate mcr
 
 #
@@ -14,7 +16,9 @@ rm -rf data.features data.item data.distance data.score data.abx data.csv
 ## preparing data
 #
 
-echo "Preparing data"
+echo "################"
+echo "# Preparing data"
+echo "################"
 cd data
 
 # extracting annotations
@@ -50,10 +54,16 @@ cd -
 ## create ABX files
 #
 
-python ./src/prepare_abx.py  data/train_annotations.csv src/segmented.cfg trained.clf
+echo "######################################"
+echo "# Preparing item and feature files ..."
+echo "######################################"
+python ./src/prepare_abx.py  data/annotations.csv src/segmented.cfg  
 
 
 source activate zerospeech
+echo "#################"
+echo "# Running ABX ..."
+echo "#################"
 python ./src/run_abx.py data
 source deactivate 
 

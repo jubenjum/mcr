@@ -21,7 +21,7 @@ done | shuf > $all_ann
 
 # split will generate two files xaa with 70% of all data
 # and xab with the rest
-split -l $[ $(wc -l $all_ann |cut -d" " -f1) * 5 / 100 ] $all_ann
+split -l $[ $(wc -l $all_ann |cut -d" " -f1) * 70 / 100 ] $all_ann
 
 echo "filename,start,end,label" > $train_ann
 cat xaa >> $train_ann
@@ -30,5 +30,10 @@ echo "filename,start,end,label" > $test_ann
 cat xab >> $test_ann
 
 rm -rf xaa xab
+
+echo "filename,start,end,label" 
+
+sed -i '1s/^/filename,start,end,label\n/' $all_ann
+
 
 
