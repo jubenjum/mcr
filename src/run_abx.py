@@ -8,6 +8,7 @@ package_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if not(package_path in sys.path):
     sys.path.append(package_path)
 import ABXpy.task
+import ABXpy.distances.distances  
 import ABXpy.distances.distances as distances
 import ABXpy.distances.metrics.cosine as cosine
 import ABXpy.distances.metrics.dtw as dtw
@@ -17,6 +18,25 @@ import ABXpy.analyze as analyze
 
 import scipy.spatial.distance
 
+
+# This class override ABXpy.distances.distances.Features_Accessor
+class Modified_Features_Accessor(ABXpy.distances.distances.Features_Accessor):
+
+    def __init__(self, times, features):
+        self.times = times
+        self.features = features
+
+    def get_features_from_raw(self, items):
+        features = {}
+        for ix, f, on, off in zip(items.index, items['file'],
+                                  items['onset'], items['offset']):
+            f=str(f)
+            #t = np.where(np.logical_and(self.times[f] >= on,
+            #                            self.times[f] <= off))[0]
+            features[ix] = self.features[f]#[t, :]
+        return features
+
+ABXpy.distances.distances.Features_Accessor = Modified_Features_Accessor
 
 
 def cosine_distance(x, y, normalized):
