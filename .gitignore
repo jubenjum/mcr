@@ -9,4 +9,8 @@ TODO.md
 *.item
 *.score
 *.csv
-
+*.wav
+*.WAV
+data/
+output/
+*.TextGrid

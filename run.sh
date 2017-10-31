@@ -10,8 +10,6 @@ source activate mcr
 rm -rf trained.clf predicted.csv data/train_annotations.csv data/test_annotations.csv
 rm -rf data.features data.item data.distance data.score data.abx data.csv
 
-
-
 #
 ## preparing data
 #
@@ -22,7 +20,6 @@ echo "################"
 cd data
 
 # extracting annotations
-rm *.csv
 ./prep_annot.sh
 
 # fixing sampling rate

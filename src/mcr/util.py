@@ -119,6 +119,7 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
     with open(item_file, 'w') as ifile:
         ifile.write("#file onset offset #call\n") 
         for n, (file_description, features_selection)   in enumerate(data_features.iteritems()):
+            #ipdb.set_trace()
             audio_file, start_audio = file_description
 
             # selelected_annots have filename, start, end, label
@@ -126,7 +127,7 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
                     (annotations['start'] == start_audio)]
 
             v_ = np.array([features_selection.flatten()])
-            all_features.append(v_.T)
+            all_features.append(v_)
             times.append(float(selected_annot['start']) + 0.5*(float(selected_annot['end']) -
                          float(selected_annot['start']))
                          )

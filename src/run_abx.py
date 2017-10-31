@@ -7,6 +7,8 @@ import sys
 package_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if not(package_path in sys.path):
     sys.path.append(package_path)
+
+
 import ABXpy.task
 import ABXpy.distances.distances  
 import ABXpy.distances.distances as distances
@@ -17,7 +19,7 @@ import ABXpy.misc.items as items
 import ABXpy.analyze as analyze
 
 import scipy.spatial.distance
-
+import ipdb
 
 # This class override ABXpy.distances.distances.Features_Accessor
 class Modified_Features_Accessor(ABXpy.distances.distances.Features_Accessor):
@@ -43,6 +45,7 @@ def cosine_distance(x, y, normalized):
     return scipy.spatial.distance.cosine(x, y)
     #return scipy.spatial.distance.correlation(x, y)
 
+
 def dtw_cosine_distance(x, y, normalized):
     return dtw.dtw(x, y, cosine.cosine_distance, normalized)
 
@@ -61,6 +64,7 @@ def run_abx(data_file, verbose=False, distance=cosine_distance):
     map(os.remove, filter(os.path.exists, remove_files))
 
     # running the evaluation
+    #ipdb.set_trace()
     task = ABXpy.task.Task(item_file, 'call')
     task.generate_triplets(taskfilename)
     distances.compute_distances(feature_file, '/features/', taskfilename,
