@@ -32,12 +32,19 @@ if __name__ == '__main__':
             prog='prepare_abx.py',
             formatter_class=argparse.RawDescriptionHelpFormatter,
             description='prepare the abx files to compute ABX score')
+
         parser.add_argument('datafile', metavar='DATAFILE',
                             nargs=1,
                             help='file with training stimuli')
+
         parser.add_argument('config', metavar='CONFIG',
                             nargs=1,
                             help='configuration file')
+
+        parser.add_argument('output', metavar='OUTPUT',      
+                            nargs=1,
+                            help='output file name')
+
         parser.add_argument('-v', '--verbose',
                             action='store_true',
                             dest='verbose',
@@ -49,6 +56,7 @@ if __name__ == '__main__':
 
     data_file = args['datafile'][0]
     config_file = args['config'][0]
+    output_file = args['output'][0]
     verbose = args['verbose']
 
     ###### ANNOTATIONS
@@ -110,6 +118,6 @@ if __name__ == '__main__':
             feat_cache.update(fl.feat_cache)
 
     ###### BUILD ABX files
-    generate_abx_files(feat_cache, df, file_name="data")
+    generate_abx_files(feat_cache, df, file_name=output_file)
 
 

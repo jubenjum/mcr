@@ -11,6 +11,8 @@ TODO.md
 *.csv
 *.wav
 *.WAV
+*.log
 data/
 output/
 *.TextGrid
+src/mcr.egg-info/

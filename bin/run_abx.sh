@@ -2,30 +2,38 @@
 
 set -e
 
+EXP_NAME=data
+BIN=$PWD/bin
+DATA_DIR=$PWD/data
+OUTPUT_DIR=$PWD/output
+export PATH=$PATH:$PWD/bin
+
+
 source activate mcr
 
 #
 ## remove outputs
 #
-rm -rf trained.clf predicted.csv data/train_annotations.csv data/test_annotations.csv
-rm -rf data.features data.item data.distance data.score data.abx data.csv
+rm -rf $OUTPUT_DIR/*.csv $OUTPUT_DIR/data.*
 
 #
 ## preparing data
 #
 
+mkdir -p $OUTPUT_DIR
 echo "################"
 echo "# Preparing data"
 echo "################"
-cd data
+cd $DATA_DIR
 
 # extracting annotations
-./prep_annot.sh
+prep_annot.sh $DATA_DIR $OUTPUT_DIR 
 
 # fixing sampling rate
 for i in *.WAV; do
     f=$(basename $i .WAV);
-    sox -t wav $i -e signed-integer -b 16 -c 1 -r 16000 ${f}.wav;
+    sox -V0 -t wav $i -e signed-integer -b 16 -c 1 \
+        -r 16000 ${f}.wav 2>&1 >> $OUTPUT_DIR/experiment.log 
 done
 
 cd -
@@ -54,13 +62,12 @@ cd -
 echo "######################################"
 echo "# Preparing item and feature files ..."
 echo "######################################"
-python ./src/prepare_abx.py  data/annotations.csv src/segmented.cfg  
-
+python $BIN/prepare_abx.py  $OUTPUT_DIR/annotations.csv $OUTPUT_DIR/segmented.cfg $OUTPUT_DIR/$EXP_NAME 
 
 source activate zerospeech
 echo "#################"
 echo "# Running ABX ..."
 echo "#################"
-python ./src/run_abx.py data
+python $BIN/run_abx.py $OUTPUT_DIR/$EXP_NAME
 source deactivate 
 
