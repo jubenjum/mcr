@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """prepare_abx: prepare the abx files to compute ABX score.
 
 """

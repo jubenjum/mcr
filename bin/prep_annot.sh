@@ -1,7 +1,29 @@
 #!/bin/bash
 
+set -e
+
 DATA_DIR=$1
 OUTPUT_DIR=$2
+
+# equivalent to $(readlink -f $1) in pure bash (compatible with macos)
+function realpath {
+    pushd $(dirname $1) > /dev/null
+    echo $(pwd -P)
+    popd > /dev/null
+}
+export -f realpath;
+
+# called on script errors
+function failure { [ ! -z "$1" ] && echo "Error: $1"; exit 1; }
+
+
+# go to this script directory, restore current directory at exit
+trap "cd $(pwd)" EXIT
+
+
+# check if variables
+[ ! -z "$DATA_DIR" ] || failure "DATA_DIR command line argument not set" 
+[ ! -z "$OUTPUT_DIR" ] || failure "OUTPUT_DIR command line argument not set" 
 
 cd $DATA_DIR
 
@@ -15,8 +37,15 @@ rm -rf $train_ann $test_ann xaa xab
 # FIX: lt is not reproducible
 RANDOM=1
 for tg_file in $DATA_DIR/*.TextGrid; do
+    text_name=$(basename $tg_file .TextGrid) # only the file name no directory
+    wav_name=$(ls -AF1 ${text_name}.* | grep -v TextGrid) # the other file
+    ext_wav_file="${wav_name##*.}"
+    curr_dir=$(realpath $tg_file)
+
+    #  
     dump_textgrids.py $tg_file | grep -v filename | \
-        sed 's/TextGrid/wav/g'
+        sed "s/TextGrid/"$ext_wav_file"/g" | \
+        sed "s#"$curr_dir"#"$OUTPUT_DIR/wav"#g" 
 done | shuf > $all_ann
 
 # split will generate two files xaa with 80% of all data
