@@ -6,6 +6,7 @@ EXP_NAME=data
 DATA_DIR="$1" 
 OUTPUT_DIR="$2"
 
+source activate mcr
 
 # equivalent to $(readlink -f $1) in pure bash (compatible with macos)   
 function realpath {                                                      
@@ -30,7 +31,6 @@ OUTPUT_DIR="${OUTPUT_PATH}"
 DATA_PATH=$(realpath "$DATA_DIR")
 DATA_DIR="${DATA_PATH}"
 
-source activate mcr
 
 #
 ## remove previous outputs
@@ -58,7 +58,7 @@ shopt -s nullglob
 for original_wav in "$DATA_DIR"/*.{WAV,wav,aif}; do
     ext_file="${original_wav##*.}" 
     new_wav="$OUTPUT_DIR/wav/"$(basename "$original_wav" .$ext_file | tr ' ' '_');
-    echo "$original_wav -> $new_wav" >> "${OUTPUT_DIR}/${EXP_NAME}".log
+    echo "$original_wav -> $new_wav.wav" >> "${OUTPUT_DIR}/${EXP_NAME}".log
     sox -V0 "$original_wav" -e signed-integer -b 16 -c 1 \
         -r 16000 "$new_wav".wav 2>&1 >> "$OUTPUT_DIR/${EXP_NAME}".log 
 done
@@ -84,6 +84,7 @@ done
 ## create ABX files
 #
 
+
 echo "######################################"
 echo "# Preparing item and feature files ..."
 echo "######################################"
@@ -96,5 +97,4 @@ echo "#################"
 run_abx.py "$OUTPUT_DIR/$EXP_NAME"
 source deactivate 
 
-echo "aca"
 

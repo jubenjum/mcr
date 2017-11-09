@@ -23,7 +23,7 @@ from mcr.util import load_config
 from mcr.util import verb_print
 from mcr.util import generate_abx_files
 import mcr.load_segmented
-
+import ipdb
 
 
 if __name__ == '__main__':
@@ -120,6 +120,7 @@ if __name__ == '__main__':
             feat_cache.update(fl.feat_cache)
 
     ###### BUILD ABX files
+    #ipdb.set_trace()
     generate_abx_files(feat_cache, df, file_name=output_file)
 
 

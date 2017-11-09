@@ -36,18 +36,18 @@ RANDOM=1
 for tg_file in "$DATA_DIR"/*.TextGrid; do
     #echo "$tg_file" >&2 
     text_name=$(basename "$tg_file" .TextGrid) # only the file name no directory
-    wav_name=$(ls -AF1 "$text_name".* | grep -v TextGrid) # the other file
-    ext_wav_file="${wav_name##*.}"
-    curr_dir=$(realpath "$tg_file")
+    #ext_wav_file="${wav_name##*.}"
+    #curr_dir=$(realpath "$tg_file")
     curr_name=$(echo $text_name | tr ' ' '_')
 
     #  
+    #python ~/tmp/algo/mcr/src/dump_textgrids.py "$tg_file" | grep -v filename | \
     dump_textgrids.py "$tg_file" | grep -v filename | \
-        sed "s/$text_name\.TextGrid/$curr_name\.wav/g" #| \
+        sed "s/$text_name\.TextGrid/$curr_name\.wav/g" 
         #sed "s#$curr_dir#$OUTPUT_DIR/wav#g" 
-done | shuf > "$all_ann"
+done > "$all_ann"
 
-sed -i "s#$DATA_DIR#$OUTPUT_DIR/wav#g" "$all_ann" 
+sed -i "s#$DATA_DIR#$OUTPUT_DIR/wav/#g" "$all_ann" 
 
 
 # split will generate two files xaa with 80% of all data

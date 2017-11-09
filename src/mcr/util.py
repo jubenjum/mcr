@@ -125,13 +125,21 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
             # selelected_annots have filename, start, end, label
             selected_annot = annotations.loc[(annotations['filename'] == audio_file) &
                     (annotations['start'] == start_audio)]
+            #print('++++++++++++++++++++++++++++ '+ audio_file + ' ' + str(len(selected_annot)))
+            #print(selected_annot)
+            
+            # data have some issues with doublets
+            # I am taking the first, TODO: select other than first
+            if len(selected_annot) > 1: 
+                selected_annot = selected_annot.iloc[0]
 
             v_ = np.array([features_selection.flatten()])
             all_features.append(v_)
             times.append(float(selected_annot['start']) + 0.5*(float(selected_annot['end']) -
                          float(selected_annot['start']))
                          )
-            bname = '{}_{:04}'.format(os.path.basename(audio_file), n)
+            bname = '{}_{:04d}'.format(os.path.basename(audio_file), n)
+            #print('************************ '+bname)
             files.append(bname)
             ifile.write("{} {} {} {}\n".format(bname,
                 float(selected_annot['start']), 
