@@ -9,10 +9,11 @@
 '''
 
 import os 
+import string
 from pyparsing import * 
 
 
-SILS = [ ' ', 'SIL' ]
+SILS = [ ' ', 'SIL', '#', 'X']
 
 def dump_textgrid2csv(grid_file):
     '''dump_textgrid2csv decodes TextGrid files and dumps the resutls to the stdout '''
@@ -77,11 +78,17 @@ def dump_textgrid2csv(grid_file):
 	        interval = item.interv_data.pop(0)
 		_, min_, max_, text_ = interval
 		text_ = ' '.join(text_.split()) 
-		if not text_ or text_ == ' ': 
+		if not text_ or text_ in SILS: 
 		   text = 'SIL'
 		else:
 		   text = interval.annotation
-                print("{},{:f},{:f},{}".format(grid_, float(min_), float(max_), text))
+                
+                # remove all non printable chars that are inserted when 
+                # processing in done manually
+                filtered_text = filter(lambda x: x in string.printable, text)
+
+                print("{},{:f},{:f},{}".format(grid_, float(min_), float(max_), 
+                      filtered_text.replace(' ','')))
 
 
 

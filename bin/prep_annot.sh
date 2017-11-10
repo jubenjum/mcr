@@ -41,8 +41,8 @@ for tg_file in "$DATA_DIR"/*.TextGrid; do
     curr_name=$(echo $text_name | tr ' ' '_')
 
     #  
-    #python ~/tmp/algo/mcr/src/dump_textgrids.py "$tg_file" | grep -v filename | \
-    dump_textgrids.py "$tg_file" | grep -v filename | \
+    dump_textgrids.py "$tg_file" | \
+        grep -v filename | grep -v SIL | \
         sed "s/$text_name\.TextGrid/$curr_name\.wav/g" 
         #sed "s#$curr_dir#$OUTPUT_DIR/wav#g" 
 done > "$all_ann"
