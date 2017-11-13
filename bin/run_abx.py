@@ -19,7 +19,7 @@ import ABXpy.misc.items as items
 import ABXpy.analyze as analyze
 
 import scipy.spatial.distance
-import ipdb
+#import ipdb
 
 # This class override ABXpy.distances.distances.Features_Accessor
 class Modified_Features_Accessor(ABXpy.distances.distances.Features_Accessor):

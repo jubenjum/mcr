@@ -4,14 +4,12 @@
 
 """
 
-from __future__ import division
+
 
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-
 import operator
-from pprint import pformat
 
 import pandas as pd
 import numpy as np
@@ -23,7 +21,6 @@ from mcr.util import load_config
 from mcr.util import verb_print
 from mcr.util import generate_abx_files
 import mcr.load_segmented
-import ipdb
 
 
 if __name__ == '__main__':
@@ -122,5 +119,3 @@ if __name__ == '__main__':
     ###### BUILD ABX files
     #ipdb.set_trace()
     generate_abx_files(feat_cache, df, file_name=output_file)
-
-

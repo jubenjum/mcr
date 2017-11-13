@@ -14,11 +14,10 @@ from numpy.lib.stride_tricks import as_strided
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.base import TransformerMixin, BaseEstimator
 from joblib import Parallel, delayed
+
 from spectral import Spectral
 from zca import ZCA
-
 from util import wavread
-
 
 
 ## helper functions for the FeatureLoader class
@@ -41,6 +40,7 @@ def load_wav(fname, fs=16000):
 # because I cannot get the parallellization to work on instance methods
 def extract_features_at(sig, noise, start, stacksize, encoder,
                         buffer_length=0.1):
+
     # determine buffer and call start and end points in smp and fr
     buffer_len_smp = int(buffer_length * encoder.fs)
     buffer_len_fr = int(buffer_len_smp / encoder.fshift)
@@ -54,10 +54,7 @@ def extract_features_at(sig, noise, start, stacksize, encoder,
     slice_end_smp = call_end_smp + buffer_len_smp
 
     # pad signal
-    sig = np.pad(sig,
-                 (buffer_len_smp,
-                  buffer_len_smp),
-                 'constant')
+    sig = np.pad(sig, (buffer_len_smp, buffer_len_smp), 'constant')
     sig_slice = sig[slice_start_smp: slice_end_smp]
 
     # extract features and cut out call
@@ -65,9 +62,7 @@ def extract_features_at(sig, noise, start, stacksize, encoder,
     feat = feat[buffer_len_fr: buffer_len_fr + stacksize]
 
     # pad at the end
-    feat = np.pad(feat,
-                  ((0, stacksize - feat.shape[0]), (0, 0)),
-                  'constant')
+    feat = np.pad(feat, ((0, stacksize - feat.shape[0]), (0, 0)), 'constant')
     return feat
 
 
@@ -230,11 +225,19 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
     def _fill_feat_cache(self, X_keys):
         sigs = [self._load_wav(fname) for fname, _ in X_keys]
         noises = [self._extract_noise(fname) for fname, _ in X_keys]
-        p = Parallel(n_jobs=self.n_jobs, verbose=0)(
-            delayed(extract_features_at)(
-                sig, noise, start, self.stacksize, self.encoder)
-            for (fname, start), sig, noise in izip(X_keys, sigs, noises)
-        )
+    
+        p = []
+        if self.n_jobs == 1:
+            for (fname, start), sig, noise in izip(X_keys, sigs, noises):
+                r = extract_features_at(sig, noise, start, self.stacksize, self.encoder)
+                p.append(r)
+
+        else:
+            p = Parallel(n_jobs=self.n_jobs, verbose=0)(
+                delayed(extract_features_at)(
+                    sig, noise, start, self.stacksize, self.encoder)
+                for (fname, start), sig, noise in izip(X_keys, sigs, noises))
+
         r = {x_key: feat for x_key, feat in izip(X_keys, p)}
         key = self.get_key()
         self.feat_cache[key].update(r)
