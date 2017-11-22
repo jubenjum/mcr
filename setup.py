@@ -12,13 +12,9 @@ except ImportError:
 
 readme = open('README.rst').read()
 
-requirements = [
-    # TODO: put package requirements here
-]
+requirements = [ 'easy_abx', ]
 
-test_requirements = [
-    # TODO: put package test requirements here
-]
+dependency_links = [ 'git+https://github.com/primatelang/easy_abxpy.git', ]
 
 
 setup(
@@ -26,24 +22,22 @@ setup(
     version='0.1',
     description='DESCRIPTION',
     long_description=readme + '\n\n' ,
+    
     author='Juan Benjumea',
     author_email='jubenjum@gmail.com',
     url='https://github.com/jubenjum/mcr',
-    packages=[ 'mcr' ],
-    package_dir={'':
-                 'src'},
+    
+    packages=['mcr'],
+    package_dir={'': 'src'},
+
     include_package_data=True,
     install_requires=requirements,
+    dependency_links=dependency_links,
+
     license="GPLv3",
     zip_safe=False,
-    keywords='tde',
-    classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: GPLv3 License',
-        'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-    ],
+
+    entry_points = {'console_scripts': 
+        ['extract_features = extract_features:main'], },
+    
 )

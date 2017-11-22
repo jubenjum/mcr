@@ -7,4 +7,5 @@ Credits
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Juan Benjumea <jubenjum at gmail.com>
+
