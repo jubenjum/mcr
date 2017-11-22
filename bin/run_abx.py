@@ -18,6 +18,9 @@ import ABXpy.score as score
 import ABXpy.misc.items as items
 import ABXpy.analyze as analyze
 
+#import ipdb
+
+
 import scipy.spatial.distance
 #import ipdb
 
@@ -69,7 +72,7 @@ def run_abx(data_file, verbose=False, distance=cosine_distance):
     task.generate_triplets(taskfilename)
     distances.compute_distances(feature_file, '/features/', taskfilename,
                                 distance_file, distance,
-                                normalized = True, n_cpu=1)
+                                normalized=True, n_cpu=1)
     score.score(taskfilename, distance_file, scorefilename)
     analyze.analyze(taskfilename, scorefilename, analyzefilename)
 

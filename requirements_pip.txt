@@ -1,15 +1,13 @@
-ad3==2.1
-cvxopt==1.1.8
-joblib==0.11
-lightning===0.1-git
-numpy==1.13.1
-pystruct==0.2.5
-python-dateutil==2.6.1
-pytz==2017.2
-scikit-learn==0.18.2
-scipy==0.19.1
-six==1.10.0
-spectral==0.2.0
-toml==0.9.2
-vad==0.1.0
-zca==0.1.0
+numpy>=1.10
+scipy>=0.16.1
+pandas>=0.17
+joblib>=0.8.4
+toml>=0.9.1
+scikit-learn>=0.16,<0.19
+cvxopt>=1.1.8
+-e git+https://github.com/mblondel/lightning.git#egg=lightning-master
+-e git+https://github.com/pystruct/pystruct.git#egg=pystruct-master
+-e git+https://github.com/mwv/spectral.git#egg=spectral-master
+-e git+https://github.com/mwv/vad.git#egg=vad-master
+-e git+https://github.com/mwv/zca.git#egg=zca-master
+

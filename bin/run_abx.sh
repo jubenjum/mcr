@@ -2,11 +2,11 @@
 
 set -e
 
-EXP_NAME=data
-DATA_DIR="$1" 
-OUTPUT_DIR="$2"
+EXP_NAME="$1"
+DATA_DIR="$2" 
+OUTPUT_DIR="$3"
 
-source activate mcr
+source activate abx
 
 # equivalent to $(readlink -f $1) in pure bash (compatible with macos)   
 function realpath {                                                      
@@ -18,7 +18,7 @@ function realpath {
 export -f realpath;                                                      
                                                                          
 # called on script errors                                                
-function failure { [ ! -z "$1" ] && echo "Error: $1"; exit 1; }          
+function failure { [ ! -z "$DATA_DIR" ] && echo "Error: $DATA_DIR"; exit 1; }          
                                                                          
                                                                          
 # check if variables                                                     
@@ -65,22 +65,6 @@ done
 
 
 #
-## training
-#
-#python segmented_train.py $OUTPUT_DIR/train_annotations.csv $OUTPUT_DIR/segmented.cfg $OUTPUT_DIR/trained.clf
-#
-##
-### predicting
-##
-#python src/segmented_predict.py data/test_annotations.csv trained.clf predicted.csv
-#
-##
-### evaluating
-##
-#python src/segmented_eval.py data/test_annotations.csv predicted.csv
-
-
-#
 ## create ABX files
 #
 
@@ -88,13 +72,39 @@ done
 echo "######################################"
 echo "# Preparing item and feature files ..."
 echo "######################################"
-prepare_abx.py "$OUTPUT_DIR/annotations.csv" "$OUTPUT_DIR/segmented.cfg" "$OUTPUT_DIR/$EXP_NAME"
+echo
+echo "     ---> doing lda <---              "
+echo 
+extract_features --reduction lda --out_csv "$OUTPUT_DIR/${EXP_NAME}_LDA_input.csv" "$OUTPUT_DIR/annotations.csv" "$OUTPUT_DIR/${EXP_NAME}.cfg" "$OUTPUT_DIR/${EXP_NAME}_LDA_results"
 
-source activate zerospeech
+echo
+echo "     ---> doing pca <---              "
+echo
+extract_features --reduction pca --out_csv "$OUTPUT_DIR/${EXP_NAME}_PCA20_input.csv" "$OUTPUT_DIR/annotations.csv" "$OUTPUT_DIR/${EXP_NAME}.cfg" "$OUTPUT_DIR/${EXP_NAME}_PCA20_results"
+
+echo
+echo "     ---> doing raw <---              "
+echo 
+extract_features "$OUTPUT_DIR/annotations.csv" "$OUTPUT_DIR/${EXP_NAME}.cfg" "$OUTPUT_DIR/${EXP_NAME}_RAW_results"
+
 echo "#################"
 echo "# Running ABX ..."
 echo "#################"
-run_abx.py "$OUTPUT_DIR/$EXP_NAME"
-source deactivate 
+echo 
+echo "     ---> doing lda <---              "
+echo
+run_abx.py "$OUTPUT_DIR/${EXP_NAME}_LDA_results"
 
+
+echo
+echo "     ---> doing pca <---              "
+echo
+run_abx.py "$OUTPUT_DIR/${EXP_NAME}_PCA20_results"
+
+
+echo
+echo "     ---> doing raw <---              "
+echo 
+run_abx.py "$OUTPUT_DIR/${EXP_NAME}_RAW_results"
+source deactivate 
 
