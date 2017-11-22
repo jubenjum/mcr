@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-prepare_abx: prepare the csv files with features and labels used to compute ABX score.
+extract_features: prepare the csv files with features and labels used to compute ABX score.
 """
 
 import warnings
@@ -12,15 +12,17 @@ import sys
 import pandas as pd
 import numpy as np
 np.seterr(all='raise')
-from sklearn.grid_search import ParameterGrid
+from sklearn.model_selection import ParameterGrid
 from sklearn.decomposition import PCA
-from sklearn.lda import LDA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 #from sklearn.preprocessing import StandardScaler
 
 from mcr.util import load_config
 from mcr.util import verb_print
 from mcr.util import generate_abx_files
 import mcr.load_segmented
+
+REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW']
 
 
 def main():
@@ -30,34 +32,36 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='prepare the csv or abx files to compute ABX score')
 
-    parser.add_argument('datafile', metavar='DATAFILE',
-                        help='file with training stimuli')
+    parser.add_argument('stimuli_source', help='file with the stimuli source: wav_file, interval, label ')
 
-    parser.add_argument('config', metavar='CONFIG',
-                        help='configuration file for the feature extration')
-
-    parser.add_argument('output', metavar='OUTPUT',  help='output file name')
+    parser.add_argument('algorithm_config', help='algorithm configuration file for the feature extration')
 
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         default=False, help='talk more')
 
-    parser.add_argument('--out_csv', help='output features and labels in csv format')
-    parser.add_argument('--reduction', help='use dimension reduction, valid methods are "pca" and "lda" ')
+    parser.add_argument('-o', '--out_csv', help='output features and labels in csv format')
+    
+    parser.add_argument('-a', '--out_abx', required=False,
+            help='output features and labels item/features abx format')
+
+    parser.add_argument('-r', '--reduction', help=('use dimension reduction, '
+        'valid methods are "raw", "pca" or "lda"'))
     
     args = parser.parse_args()
 
-    data_file = args.datafile
-    output_file = args.output     
-    config_file = args.config
+    data_file = args.stimuli_source
+    config_file = args.algorithm_config
+    abx_files = args.out_abx if args.out_abx else None
     verbose = args.verbose
 
     if args.reduction:
        red_method = args.reduction
        red_method = red_method.upper()
-       if red_method not in ['PCA', 'LDA']:
-           print('--reduction shoule be "pca" or "lda", "{}" given'.format(args.reduction))
+       if red_method not in REDUCTION_METHODS:
+           print('--reduction valid algorithms: "raw", "pca" or "lda", "{}" given'.format(red_method))
            sys.exit()
-    else:
+       red_method = None if red_method=='RAW' else red_method
+    else: 
        red_method = None
    
     ###### ANNOTATIONS
@@ -67,10 +71,8 @@ def main():
         X = df[['filename', 'start', 'end']].values
         labels = df['label'].values
         
-        #label2ix = {k: i for i, k in enumerate(np.unique(labels))}
-        #y = np.array([label2ix[label] for label in labels])
 
-    with verb_print('loading configuration from {}'.format(config_file),
+    with verb_print('loading algorithm configuration from {}'.format(config_file),
                     verbose=verbose):
         config = load_config(config_file)
 
@@ -112,14 +114,13 @@ def main():
             wav_cache[fname] = mcr.load_segmented.load_wav(fname)
 
         for ix, params in enumerate(ParameterGrid(features_params)):
-            # print 'combination {}/{}'.format(ix, n_iter)
             fl.actualize_data(wav_cache=wav_cache, **params)
             fl._fill_noise_cache(X)
             noise_cache.update(fl.noise_cache)
             fl.get_specs(X)
             feat_cache.update(fl.feat_cache)
 
-    ### reducing the size of embeddings 
+    ### transforming the embeddings 
     desc_features, data_features = feat_cache.items()[0] # will remains only 1 element? 
     all_features = list()
     all_file_descriptions = list()
@@ -142,17 +143,17 @@ def main():
 	small_embeddings = pca.fit_transform(X_feat)
 
     elif red_method == 'LDA':
-	lda = LDA(n_components=20)
+	lda = LinearDiscriminantAnalysis(n_components=20)
 	small_embeddings = lda.fit_transform(X_feat, all_calls)
     
-    else:
+    else: # default = raw
         small_embeddings = X_feat   
         
 
     # re-build the dictionary used on generate_abx_files &or save
     # files to csv file 
     if args.out_csv:
-       emb_csv = open(args.out_csv, 'w') 
+        emb_csv = open(args.out_csv, 'w') 
 
     new_features = dict()
     for n, file_description in enumerate(all_file_descriptions):
@@ -165,152 +166,10 @@ def main():
     new_feat_cache = {desc_features : new_features}
 
     ####### BUILD ABX files
-    #generate_abx_files(feat_cache, df, file_name=output_file)
-    generate_abx_files(new_feat_cache, df, file_name=output_file)
+    if abx_files:
+        generate_abx_files(new_feat_cache, df, file_name=abx_files)
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
