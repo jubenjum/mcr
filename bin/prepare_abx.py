@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 
-"""prepare_abx: prepare the abx files to compute ABX score.
-
 """
-
-
-
+prepare_abx: prepare the csv files with features and labels used to compute ABX score.
+"""
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 import operator
+import sys
 
 import pandas as pd
 import numpy as np
 np.seterr(all='raise')
 from sklearn.grid_search import ParameterGrid
-#import ipdb
+from sklearn.decomposition import PCA
+from sklearn.lda import LDA
+#from sklearn.preprocessing import StandardScaler
 
 from mcr.util import load_config
 from mcr.util import verb_print
@@ -26,44 +26,51 @@ import mcr.load_segmented
 if __name__ == '__main__':
     import argparse
 
-    def parse_args():
-        parser = argparse.ArgumentParser(
-            prog='prepare_abx.py',
-            formatter_class=argparse.RawDescriptionHelpFormatter,
-            description='prepare the abx files to compute ABX score')
+    parser = argparse.ArgumentParser(
+        prog='prepare_abx.py',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='prepare the abx files to compute ABX score')
 
-        parser.add_argument('datafile', metavar='DATAFILE',
-                            nargs=1,
-                            help='file with training stimuli')
+    parser.add_argument('datafile', metavar='DATAFILE',
+                        help='file with training stimuli')
 
-        parser.add_argument('config', metavar='CONFIG',
-                            nargs=1,
-                            help='configuration file')
+    parser.add_argument('config', metavar='CONFIG',
+                        help='configuration file')
 
-        parser.add_argument('output', metavar='OUTPUT',      
-                            nargs=1,
-                            help='output file name')
+    parser.add_argument('output', metavar='OUTPUT',  
+                        help='output file name')
 
-        parser.add_argument('-v', '--verbose',
-                            action='store_true',
-                            dest='verbose',
-                            default=False,
-                            help='talk more')
-        return vars(parser.parse_args())
+    parser.add_argument('-v', '--verbose',
+                        action='store_true',
+                        dest='verbose',
+                        default=False,
+                        help='talk more')
 
-    args = parse_args()
+    parser.add_argument('--out_csv', help='output features and labels in csv format')
+    parser.add_argument('--reduction', help='use dimension reduction, valid methods are "pca" and "lda" ')
+    
+    args = parser.parse_args()
 
-    data_file = args['datafile'][0]
-    config_file = args['config'][0]
-    output_file = args['output'][0]
-    verbose = args['verbose']
-
+    data_file = args.datafile
+    output_file = args.output     
+    config_file = args.config
+    verbose = args.verbose
+    if args.reduction:
+       red_method = args.reduction
+       red_method = red_method.upper()
+       if red_method not in ['PCA', 'LDA']:
+           print('--reduction shoule be "pca" or "lda", "{}" given'.format(args.reduction))
+           sys.exit()
+    else:
+       red_method = None
+   
     ###### ANNOTATIONS
     with verb_print('reading stimuli from {}'.format(data_file),
                     verbose=verbose):
         df = pd.read_csv(data_file)
         X = df[['filename', 'start', 'end']].values
         labels = df['label'].values
+        
         #label2ix = {k: i for i, k in enumerate(np.unique(labels))}
         #y = np.array([label2ix[label] for label in labels])
 
@@ -116,6 +123,51 @@ if __name__ == '__main__':
             fl.get_specs(X)
             feat_cache.update(fl.feat_cache)
 
-    ###### BUILD ABX files
-    #ipdb.set_trace()
-    generate_abx_files(feat_cache, df, file_name=output_file)
+    ### reducing the size of embeddings 
+    desc_features, data_features = feat_cache.items()[0] # will remains only 1 element? 
+    all_features = list()
+    all_file_descriptions = list()
+    all_calls = list()
+    for file_description, features_selection in data_features.iteritems():
+        # the calls in the same order that the embeddings
+	filename, start_time = file_description
+        all_calls.append(df.label.loc[(df['filename'] == filename) &
+                 (df['start'] == start_time)].values[0])
+
+        # building the embedding 
+        v_ = np.array(features_selection.flatten())
+        all_features.append(v_)
+        all_file_descriptions.append(file_description)
+
+    X_feat = np.array(all_features)
+    #X_std = StandardScaler().fit_transform(X_feat)
+    if red_method == 'PCA': 
+	pca = PCA(n_components=20)
+	small_embeddings = pca.fit_transform(X_feat)
+
+    elif red_method == 'LDA':
+	lda = LDA(n_components=20)
+	small_embeddings = lda.fit_transform(X_feat, all_calls)
+    
+    else:
+        small_embeddings = X_feat   
+        
+
+    # re-build the dictionary used on generate_abx_files &or save
+    # files to csv file 
+    if args.out_csv:
+       emb_csv = open(args.out_csv, 'w') 
+
+    new_features = dict()
+    for n, file_description in enumerate(all_file_descriptions):
+        new_features[file_description] = small_embeddings[n,:] 
+        if args.out_csv:
+            t = '"{}",'.format(all_calls[n]) + \
+                 ','.join(['{}'.format(x) for x in small_embeddings[n,:]]) + '\n'
+            emb_csv.write(t)
+
+    new_feat_cache = {desc_features : new_features}
+
+    ####### BUILD ABX files
+    #generate_abx_files(feat_cache, df, file_name=output_file)
+    generate_abx_files(new_feat_cache, df, file_name=output_file)
