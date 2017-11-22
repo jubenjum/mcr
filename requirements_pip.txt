@@ -7,7 +7,7 @@ scikit-learn>=0.16,<0.19
 cvxopt>=1.1.8
 -e git+https://github.com/mblondel/lightning.git#egg=lightning-master
 -e git+https://github.com/pystruct/pystruct.git#egg=pystruct-master
--e git+https://github.com/mwv/spectral.git#egg=spectral-master
--e git+https://github.com/mwv/vad.git#egg=vad-master
--e git+https://github.com/mwv/zca.git#egg=zca-master
+-e git+https://github.com/primatelang/spectral.git#egg=spectral-master
+-e git+https://github.com/primatelang/vad.git#egg=vad-master
+-e git+https://github.com/primatelang/zca.git#egg=zca-master
 
