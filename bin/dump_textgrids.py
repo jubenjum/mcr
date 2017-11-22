@@ -55,7 +55,7 @@ def dump_textgrid2csv(grid_file):
                            iter_size + Group(gram_intevals)('interv_data')))
     TextGrid_grammar = hdr_size + hdr_ + gram_items
 
-    # checking the 
+    # file names 
     grid_dir = os.path.dirname(os.path.realpath(grid_file)) 
     grid_basename = os.path.basename(grid_file)
     grid_ = os.path.join(grid_dir, grid_basename)

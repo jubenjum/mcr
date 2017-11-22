@@ -23,28 +23,24 @@ from mcr.util import generate_abx_files
 import mcr.load_segmented
 
 
+
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(
-        prog='prepare_abx.py',
+    parser = argparse.ArgumentParser( prog=sys.argv[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='prepare the abx files to compute ABX score')
+        description='prepare the csv or abx files to compute ABX score')
 
     parser.add_argument('datafile', metavar='DATAFILE',
                         help='file with training stimuli')
 
     parser.add_argument('config', metavar='CONFIG',
-                        help='configuration file')
+                        help='configuration file for the feature extration')
 
-    parser.add_argument('output', metavar='OUTPUT',  
-                        help='output file name')
+    parser.add_argument('output', metavar='OUTPUT',  help='output file name')
 
-    parser.add_argument('-v', '--verbose',
-                        action='store_true',
-                        dest='verbose',
-                        default=False,
-                        help='talk more')
+    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
+                        default=False, help='talk more')
 
     parser.add_argument('--out_csv', help='output features and labels in csv format')
     parser.add_argument('--reduction', help='use dimension reduction, valid methods are "pca" and "lda" ')
@@ -55,6 +51,7 @@ if __name__ == '__main__':
     output_file = args.output     
     config_file = args.config
     verbose = args.verbose
+
     if args.reduction:
        red_method = args.reduction
        red_method = red_method.upper()
