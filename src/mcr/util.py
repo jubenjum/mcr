@@ -10,9 +10,11 @@ from itertools import product, tee
 from math import ceil, log
 from functools import partial
 import os.path
-#import ipdb
+import ipdb
 
 import numpy as np
+
+
 import scipy.io.wavfile
 import toml
 import sklearn.metrics
@@ -113,9 +115,9 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
     # the first element in features is is the encoder parameters
     data_features = features[features.keys()[0]]
 
-    all_features = []
+    features = []
     times = []
-    files = []
+    items = []
     with open(item_file, 'w') as ifile:
         ifile.write("#file onset offset #call\n") 
         for n, (file_description, features_selection)   in enumerate(data_features.iteritems()):
@@ -125,29 +127,28 @@ def generate_abx_files(features, annotations, file_name='abx_dataw'):
             # selelected_annots have filename, start, end, label
             selected_annot = annotations.loc[(annotations['filename'] == audio_file) &
                     (annotations['start'] == start_audio)]
-            #print('++++++++++++++++++++++++++++ '+ audio_file + ' ' + str(len(selected_annot)))
-            #print(selected_annot)
             
             # data have some issues with doublets
             # I am taking the first, TODO: select other than first
             if len(selected_annot) > 1: 
                 selected_annot = selected_annot.iloc[0]
 
+            # building the embedding 
             v_ = np.array([features_selection.flatten()])
-            all_features.append(v_)
+            #print(v_.shape)
+            features.append(v_)
             times.append(float(selected_annot['start']) + 0.5*(float(selected_annot['end']) -
                          float(selected_annot['start']))
                          )
             bname = '{}_{:04d}'.format(os.path.basename(audio_file), n)
-            #print('************************ '+bname)
-            files.append(bname)
+            items.append(bname)
             ifile.write("{} {} {} {}\n".format(bname,
                 float(selected_annot['start']), 
                 float(selected_annot['end']),
                 selected_annot['label'].values[0]))
 
     labels = list(np.array([times]))
-    data = h5f.Data(files, labels, all_features, check=False)
+    data = h5f.Data(items, labels, features, check=False)
     h5_features = h5f.Writer(features_file)
     h5_features.write(data, 'features')
     h5_features.close()
