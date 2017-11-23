@@ -5,9 +5,6 @@ contains bash and python scripts that are used on the project
 
 - dump_textgrids.py: convert from praat textgrids to csv used with the mcr scripts  
 - prep_annot.sh: prepare files to use with mcr scripts
-- prepare_abx.py
-- run_abx.py
-- run_abx.sh  
 - segmented_eval.py
 - segmented_predict.py
 - segmented_train.py
