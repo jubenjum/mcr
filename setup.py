@@ -12,9 +12,11 @@ except ImportError:
 
 readme = open('README.rst').read()
 
-requirements = [ 'easy_abx', ]
+#requirements = [ 'easy_abx', ]
+#dependency_links = [ 'git+https://github.com/primatelang/easy_abxpy.git', ]
 
-dependency_links = [ 'git+https://github.com/primatelang/easy_abxpy.git', ]
+requirements = [  ]
+dependency_links = [  ]
 
 
 setup(

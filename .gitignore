@@ -16,3 +16,9 @@ data/
 output/
 *.TextGrid
 src/mcr.egg-info/
+src/lightning-master/
+src/pystruct-master/
+src/spectral-master/
+src/vad-master/
+src/zca-master/
+
