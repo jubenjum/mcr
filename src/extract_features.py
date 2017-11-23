@@ -15,6 +15,8 @@ np.seterr(all='raise')
 from sklearn.model_selection import ParameterGrid
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.manifold import TSNE
+
 #from sklearn.preprocessing import StandardScaler
 
 from mcr.util import load_config
@@ -22,8 +24,7 @@ from mcr.util import verb_print
 from mcr.util import generate_abx_files
 import mcr.load_segmented
 
-REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW']
-
+REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE']
 
 def main():
     import argparse
@@ -45,7 +46,7 @@ def main():
             help='output features and labels item/features abx format')
 
     parser.add_argument('-r', '--reduction', help=('use dimension reduction, '
-        'valid methods are "raw", "pca" or "lda"'))
+        'valid methods are "raw", "pca", "lda" or tsne'))
     
     args = parser.parse_args()
 
@@ -54,24 +55,8 @@ def main():
     abx_files = args.out_abx if args.out_abx else None
     verbose = args.verbose
 
-    if args.reduction:
-       red_method = args.reduction
-       red_method = red_method.upper()
-       if red_method not in REDUCTION_METHODS:
-           print('--reduction valid algorithms: "raw", "pca" or "lda", "{}" given'.format(red_method))
-           sys.exit()
-       red_method = None if red_method=='RAW' else red_method
-    else: 
-       red_method = None
-   
-    ###### ANNOTATIONS
-    with verb_print('reading stimuli from {}'.format(data_file),
-                    verbose=verbose):
-        df = pd.read_csv(data_file)
-        X = df[['filename', 'start', 'end']].values
-        labels = df['label'].values
-        
-
+     
+    ###### CONFIGURATION
     with verb_print('loading algorithm configuration from {}'.format(config_file),
                     verbose=verbose):
         config = load_config(config_file)
@@ -99,6 +84,34 @@ def main():
             param_grid['features__{}'.format(k)] = v
         for k, v in clf_params.iteritems():
             param_grid['clf__{}'.format(k)] = v
+
+    
+    if args.reduction:
+        red_method = args.reduction
+        red_method = red_method.upper()
+        if red_method not in REDUCTION_METHODS:
+            print('--reduction valid algorithms: "raw", "pca", "lda" or "tsne" - "{}" given'.format(red_method))
+            sys.exit()
+        if red_method=='RAW':
+            red_method = None
+        else:
+            try:
+                new_dimension = config['dimension_reduction'][red_method]  # from the config file 
+            except:
+                print('missing section dimension_reduction in config file [{}]'.format(red_method))
+                sys.exit()
+
+    else: 
+       red_method = None
+
+
+    ###### ANNOTATIONS
+    with verb_print('reading stimuli/annotations from {}'.format(data_file),
+                    verbose=verbose):
+        df = pd.read_csv(data_file)
+        X = df[['filename', 'start', 'end']].values
+        labels = df['label'].values
+
 
     ###### FEATURES
     with verb_print('preloading audio', verbose=verbose):
@@ -139,13 +152,17 @@ def main():
     X_feat = np.array(all_features)
     #X_std = StandardScaler().fit_transform(X_feat)
     if red_method == 'PCA': 
-	pca = PCA(n_components=20)
+	pca = PCA(n_components=new_dimension)
 	small_embeddings = pca.fit_transform(X_feat)
 
     elif red_method == 'LDA':
-	lda = LinearDiscriminantAnalysis(n_components=20)
+	lda = LinearDiscriminantAnalysis(n_components=new_dimension)
 	small_embeddings = lda.fit_transform(X_feat, all_calls)
     
+    elif red_method == 'TSNE':
+        tsne = TSNE(n_components=new_dimension)
+        small_embeddings = tsne.fit_transform(X_feat)
+
     else: # default = raw
         small_embeddings = X_feat   
         
