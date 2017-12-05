@@ -13,7 +13,7 @@ import string
 from pyparsing import * 
 
 
-SILS = [ ' ', 'SIL', '#', 'X']
+SILS = [ ' ', 'SIL', 'n', '#', 'X']
 
 def dump_textgrid2csv(grid_file):
     '''dump_textgrid2csv decodes TextGrid files and dumps the resutls to the stdout '''
