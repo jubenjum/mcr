@@ -113,7 +113,7 @@ def main():
 
     elif red_method == 'LDA' and is_matrix:
 	lda = LinearDiscriminantAnalysis(n_components=new_dimension)
-	reduced_embeddings = lda.fit_transform(X_feat, all_calls)
+	reduced_embeddings = lda.fit_transform(X_feat, labels)
     
     elif red_method == 'TSNE' and is_matrix:
         tsne = TSNE(n_components=new_dimension)

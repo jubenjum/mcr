@@ -40,7 +40,7 @@ def load_wav(fname, fs=16000):
 
 # this function goes with FeatureLoader but is defined outside it,
 # because I cannot get the parallellization to work on instance methods
-def extract_features_at(sig, noise, start, stacksize, encoder, buffer_length=0.1):
+def extract_features_fix_stacksize(sig, noise, start, stacksize, encoder, buffer_length=0.1):
 
     # determine buffer and call start and end points in smp and fr
     buffer_len_smp = int(buffer_length * encoder.fs)
@@ -65,7 +65,6 @@ def extract_features_at(sig, noise, start, stacksize, encoder, buffer_length=0.1
     # pad at the end
     feat = np.pad(feat, ((0, stacksize - feat.shape[0]), (0, 0)), 'constant')
     return feat
-
 
 
 #################################
@@ -296,12 +295,12 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         p = []
         if self.n_jobs == 1:
             for (fname, start), sig, noise in izip(X_keys, sigs, noises):
-                r = extract_features_at(sig, noise, start, self.stacksize, self.encoder)
+                r = extract_features_fix_stacksize(sig, noise, start, self.stacksize, self.encoder)
                 p.append(r)
 
         else:
             p = Parallel(n_jobs=self.n_jobs, verbose=0)(
-                delayed(extract_features_at)(
+                delayed(extract_features_fix_stacksize)(
                     sig, noise, start, self.stacksize, self.encoder)
                 for (fname, start), sig, noise in izip(X_keys, sigs, noises))
 
