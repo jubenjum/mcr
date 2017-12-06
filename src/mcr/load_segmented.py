@@ -19,6 +19,8 @@ from spectral import Spectral
 from zca import ZCA
 from util import wavread
 
+import ipdb
+
 
 ## helper functions for the FeatureLoader class
 def load_wav(fname, fs=16000):
@@ -38,8 +40,7 @@ def load_wav(fname, fs=16000):
 
 # this function goes with FeatureLoader but is defined outside it,
 # because I cannot get the parallellization to work on instance methods
-def extract_features_at(sig, noise, start, stacksize, encoder,
-                        buffer_length=0.1):
+def extract_features_at(sig, noise, start, stacksize, encoder, buffer_length=0.1):
 
     # determine buffer and call start and end points in smp and fr
     buffer_len_smp = int(buffer_length * encoder.fs)
@@ -64,6 +65,72 @@ def extract_features_at(sig, noise, start, stacksize, encoder,
     # pad at the end
     feat = np.pad(feat, ((0, stacksize - feat.shape[0]), (0, 0)), 'constant')
     return feat
+
+
+
+#################################
+# extract features
+def extract_features(sig, noise, start, end, encoder, buffer_length=0.1):
+
+    # determine buffer and call start and end points in smp and fr
+    buffer_len_smp = int(buffer_length * encoder.fs)
+    buffer_len_fr = int(buffer_len_smp / encoder.fshift)
+
+    call_start_smp = int(start * encoder.fs) + buffer_len_smp
+    call_end_smp =  int(end * encoder.fs) + buffer_len_smp
+
+    # the part we're gonna cut out: [buffer + call + buffer]
+    slice_start_smp = call_start_smp - buffer_len_smp
+    slice_end_smp = call_end_smp + buffer_len_smp
+
+    # pad signal
+    sig = np.pad(sig, (buffer_len_smp, buffer_len_smp), 'constant')
+    sig_slice = sig[slice_start_smp: slice_end_smp]
+
+    # extract features and cut out call
+    feat = encoder.transform(sig_slice, noise_profile=noise)
+    feat = feat[buffer_len_fr: -buffer_len_fr]
+
+    # pad at the end
+    #feat = np.pad(feat, ((0, stacksize - feat.shape[0]), (0, 0)), 'constant')
+    return feat
+
+def extract_noise(sig, cfg, encoder):
+    
+    if cfg['n_noise_fr'][0] == 0:
+        noise = None
+    else:
+        nsamples = (cfg['n_noise_fr'][0] + 2) * encoder.fshift
+        spec = encoder.get_spectrogram(sig[:nsamples])[2:, :]
+        noise = spec.mean(axis=0)
+        noise = np.clip(noise, 1e-4, np.inf)
+        
+    return noise
+
+
+def encoder_func(cfg, encoder=Spectral):
+    '''wrap the encoder ...'''
+
+    # self.feat_param should have the right attributes
+    # that will be used to create the encoder arguments
+    encoder_attr_ = []
+    for var_name, var_value in cfg.items():
+        if var_name in ['normalize', 'n_noise_fr', 'stacksize']:
+            continue
+        if isinstance(var_value[0], unicode):
+            encoder_attr_.append("{0}='{1}'".format(var_name, var_value[0]))
+        else:
+            encoder_attr_.append("{0}={1}".format(var_name, var_value[0]))
+
+    # dynamically build and run the encoder with its defined attributes
+    _encoder_args = ', '.join([str(w) for w in encoder_attr_])
+    _encoder_comm = "_encoder = encoder({})".format(_encoder_args)
+    exec(_encoder_comm)
+
+    return _encoder 
+
+###########################
+
 
 
 class IdentityTransform(TransformerMixin, BaseEstimator):
