@@ -40,6 +40,7 @@ setup(
     zip_safe=False,
 
     entry_points = {'console_scripts': 
-        ['extract_features = extract_features:main'], },
-    
+        ['extract_features = extract_features:main',
+        'reduce_features = reduce_features:main'], },
+ 
 )
