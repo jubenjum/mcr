@@ -12,6 +12,7 @@ import sys
 import pandas as pd
 import numpy as np
 np.seterr(all='raise')
+np.seterr(under="ignore")
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.decomposition import PCA
