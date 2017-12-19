@@ -12,8 +12,6 @@ except ImportError:
 
 readme = open('README.rst').read()
 
-#requirements = [ 'easy_abx', ]
-#dependency_links = [ 'git+https://github.com/primatelang/easy_abxpy.git', ]
 
 requirements = [  ]
 dependency_links = [  ]
@@ -40,7 +38,8 @@ setup(
     zip_safe=False,
 
     entry_points = {'console_scripts': 
-        ['extract_features = extract_features:main',
-        'reduce_features = reduce_features:main'], },
+        ['extract_features = mcr.extract_features:main',
+        'reduce_features = mcr.reduce_features:main',
+        'dump_textgrids = mcr.dump_textgrids:main'], },
  
 )

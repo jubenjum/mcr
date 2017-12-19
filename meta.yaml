@@ -1,0 +1,28 @@
+package:
+  name: mcr 
+  version: "0.1"
+
+source:
+  path: . 
+
+build:
+  entry_points:
+    - extract_features = mcr.extract_features:main
+    - reduce_features = mcr.reduce_features:main
+    - dump_textgrids = mcr.dump_textgrids:main
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - pip
+  run:
+    - python
+    - h5features
+    - pyparsing
+    - joblib
+    - numpy
+    - pandas
+    - scikit-learn 
+    - scipy
+

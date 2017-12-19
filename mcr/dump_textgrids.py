@@ -91,6 +91,9 @@ def dump_textgrid2csv(grid_file):
                       filtered_text.replace(' ','')))
 
 
+def main():
+    dump_textgrid2csv(textgrid_file)
+
 
 if __name__ == '__main__':
     import argparse
@@ -101,4 +104,4 @@ if __name__ == '__main__':
             help='File in TextGrid format')
     args = parser.parse_args()
     textgrid_file = args.textgrid_file[0]
-    dump_textgrid2csv(textgrid_file)
+    main()

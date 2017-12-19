@@ -1,8 +1,8 @@
 toml>=0.9.1
 ipdb
--e git+https://github.com/mblondel/lightning.git#egg=lightning-master
--e git+https://github.com/pystruct/pystruct.git#egg=pystruct-master
--e git+https://github.com/primatelang/spectral.git#egg=spectral-master
--e git+https://github.com/primatelang/vad.git#egg=vad-master
--e git+https://github.com/primatelang/zca.git#egg=zca-master
+git+https://github.com/primatelang/lightning#egg=lightning-master
+git+https://github.com/primatelang/pystruct#egg=pystruct-master
+git+https://github.com/primatelang/spectral.git#egg=spectral-master
+git+https://github.com/primatelang/vad.git#egg=vad-master
+git+https://github.com/primatelang/zca.git#egg=zca-master
 
