@@ -16,6 +16,7 @@ requirements:
     - python
     - setuptools
     - pip
+    - numpy
   run:
     - python
     - h5features

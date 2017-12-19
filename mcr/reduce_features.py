@@ -19,7 +19,6 @@ from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
-import ipdb
 
 from mcr.util import load_config
 
@@ -27,11 +26,68 @@ from mcr.util import load_config
 REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
+def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False):
+    ''' dimesion_deduction is a wrap to PCA, LDA and TSNE dimension reduciton methods
+
+    The input features will be reduced with one of these methods (or raw output), it can be
+    removed the std from the features using the std.
+    
+    Parameters
+    ----------
+    features: list of list with floating point values (list)
+    labels: values of the same size of features (list)
+    red_method: the reduction method, valid methods are: 
+                'PCA', 'LDA', 'RAW', 'TSNE' (str)
+    new_dimension: new dimension [int]
+    standard_scaler: scale all features [bool]
+
+
+    Returns
+    -------
+    reduced_embeddings: features with the lower dimension (numpy.ndarray)
+    labels: list of label (numpy.ndarray)
+
+
+    '''
+
+    if red_method not in REDUCTION_METHODS:
+        raise ValueError('red_method {} not supported'.format(red_method))
+
+    ###### FEATURES feature reduction
+    X_feat = np.array(features)
+    labels = np.array(labels)
+    is_matrix = False if np.object == X_feat.dtype else True
+   
+    if not is_matrix and (red_method in MATRIX_METHODS):
+        print('all features should have the same dimension')
+        sys.exit()
+
+    if standard_scaler and is_matrix:
+        X_feat = StandardScaler().fit_transform(X_feat)
+
+    if red_method == 'PCA' and is_matrix: 
+	pca = PCA(n_components=new_dimension)
+	reduced_embeddings = pca.fit_transform(X_feat)
+
+    elif red_method == 'LDA' and is_matrix:
+	lda = LinearDiscriminantAnalysis(n_components=new_dimension)
+	reduced_embeddings = lda.fit_transform(X_feat, labels)
+    
+    elif red_method == 'TSNE' and is_matrix:
+        tsne = TSNE(n_components=new_dimension)
+        reduced_embeddings = tsne.fit_transform(X_feat)
+
+    else: # default = raw
+        reduced_embeddings = X_feat   
+
+    return reduced_embeddings, labels
+
+
 
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser( prog=sys.argv[0],
+    parser = argparse.ArgumentParser(prog=sys.argv[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='prepare the csv or abx files to compute ABX score')
 
@@ -82,50 +138,22 @@ def main():
     ###### FEATURES: where 
     ## label,feat1,feat2..featNJ where J is the  total number of labels, N number of features 
     
-    #columns = ['label'] 
-    #df = pd.read_csv(data_file, names=columns, engine='python')
-    #X = df[['filename', 'start', 'end']].values
-    #labels = df['label'].values
-
-    ## FIX: what if the format changes?
-    labels = []
-    features = []
+    ## FIXME: what if the format changes?
+    labels_from_csv = []
+    features_from_csv = []
     with open(data_file, 'r') as dfile:
         for line in dfile.readlines():
             row = line.strip().split(',') # TODO 
-            labels.append(row[0]) # label/call in the first column
-            features.append([float(x) for x in row[1:]])
+            labels_from_csv.append(row[0]) # label/call in the first column
+            features_from_csv.append([float(x) for x in row[1:]])
 
 
     ###### FEATURES feature reduction
-    X_feat = np.array(features)
-    is_matrix = False if np.object == X_feat.dtype else True
-   
-    if not is_matrix and (red_method in MATRIX_METHODS):
-        print('all features should have the same dimension')
-        sys.exit()
-
-    if standard_scaler and is_matrix:
-        X_feat = StandardScaler().fit_transform(X_feat)
-
-    if red_method == 'PCA' and is_matrix: 
-	pca = PCA(n_components=new_dimension)
-	reduced_embeddings = pca.fit_transform(X_feat)
-
-    elif red_method == 'LDA' and is_matrix:
-	lda = LinearDiscriminantAnalysis(n_components=new_dimension)
-	reduced_embeddings = lda.fit_transform(X_feat, labels)
-    
-    elif red_method == 'TSNE' and is_matrix:
-        tsne = TSNE(n_components=new_dimension)
-        reduced_embeddings = tsne.fit_transform(X_feat)
-
-    else: # default = raw
-        reduced_embeddings = X_feat   
-        
+    features, labels = dimension_reduction(features_from_csv, labels_from_csv,
+                                           red_method, new_dimension, standard_scaler)   
 
     with open(output_csv, 'w') as emb_csv: 
-        for label, feats in zip(labels, reduced_embeddings):
+        for label, feats in zip(labels, features):
             t = '{},'.format(label) + ','.join(['{}'.format(x) for x in feats]) + '\n'
             emb_csv.write(t)
 

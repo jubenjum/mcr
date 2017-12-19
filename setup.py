@@ -28,7 +28,7 @@ setup(
     url='https://github.com/jubenjum/mcr',
     
     packages=['mcr'],
-    package_dir={'': 'src'},
+    #package_dir={'': 'src'},
 
     include_package_data=True,
     install_requires=requirements,
@@ -36,6 +36,10 @@ setup(
 
     license="GPLv3",
     zip_safe=False,
+
+    scripts = ['bin/segmented_eval.py', 'bin/segmented_predict.py', 
+        'bin/segmented_train.py', 'bin/transcription_eval.py', 
+        'bin/transcription_predict.py', 'bin/transcription_train.py' ],
 
     entry_points = {'console_scripts': 
         ['extract_features = mcr.extract_features:main',

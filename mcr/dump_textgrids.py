@@ -92,16 +92,16 @@ def dump_textgrid2csv(grid_file):
 
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('textgrid_file', metavar='TEXTGRID_FILE', \
+            nargs=1, help='File in TextGrid format')
+    args = parser.parse_args()
+    textgrid_file = args.textgrid_file[0]
+
     dump_textgrid2csv(textgrid_file)
 
 
 if __name__ == '__main__':
-    import argparse
-
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('textgrid_file', metavar='TEXTGRID_FILE', nargs=1, \
-            help='File in TextGrid format')
-    args = parser.parse_args()
-    textgrid_file = args.textgrid_file[0]
     main()

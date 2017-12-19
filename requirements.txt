@@ -29,3 +29,6 @@ sqlite=3.20.1=hb898158_2
 tk=8.6.7=hc745277_3
 wheel=0.30.0=py27h2bc6bb2_1
 zlib=1.2.11=ha838bed_2
+h5features=1.2.1-py27_0        
+h5py=2.7.1-py27h2697762_0
+hdf5=1.10.1-h9caa474_1

@@ -9,13 +9,25 @@ import sys
 import pandas as pd
 import numpy as np
 
-from .util import load_config
-import .load_segmented
+from mcr.util import load_config
+import mcr.load_segmented
 
 
-def get_features(features_params, call_intervals, labels):
+def get_features(features_params, call_intervals, read_labels):
     ''' get_features reads the wav files and returns the features 
     for the selected intervals from the annotation file
+        
+    Parameters
+    ----------
+    features_params: parameters from the config file, loaded with mcr.util.load_config (dict)
+    call_intervals: arrays with structure = [wav_filename, start_time, end_time  ] (numpy.ndarray)
+
+    Returns
+    -------
+    features: features extracted from call_intervals files using parameters from 
+              the features_params  (list[numpy.ndarray])
+    labels: labels related to the features
+
     '''
 
     # if fix-stacksize is set to 0 it it will read all the interval from the transcriptions
@@ -40,7 +52,7 @@ def get_features(features_params, call_intervals, labels):
         
         features.append(feats.flatten())
     
-    return features
+    return features, read_labels
 
 
 def main():
@@ -50,18 +62,17 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description='prepare the csv files to build abx files')
 
-    parser.add_argument('stimuli_source', help='file with the stimuli source: wav_file, interval, label ')
+    parser.add_argument('annotations_file', help='file with the stimuli source: wav_file, interval, label ')
 
-    parser.add_argument('algorithm_config', help='algorithm configuration file for the feature extration')
+    parser.add_argument('config_file', help='algorithm configuration file for the feature extration')
 
     parser.add_argument('-o', '--out_csv', help='output features and labels in csv format')
     
     args = parser.parse_args()
 
-    annotation_file = args.stimuli_source
-    config_file = args.algorithm_config
+    annotation_file = args.annotations_file
+    config_file = args.config_file
 
-     
     ###### CONFIGURATION
     config = load_config(config_file)
     features_params = mcr.load_segmented.ensure_list(config['features'])
@@ -69,8 +80,8 @@ def main():
     ###### READ ANNOTATIONS & GET FEATURES
     df = pd.read_csv(annotation_file)
     call_intervals = df[['filename', 'start', 'end']].values
-    labels = df['label'].values
-    features = get_features(features_params, call_intervals, labels)
+    read_labels = df['label'].values
+    features, labels = get_features(features_params, call_intervals, read_labels)
 
     # write the csv file
     with open(args.out_csv, 'w') as emb_csv:
