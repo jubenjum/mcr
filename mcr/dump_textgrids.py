@@ -13,6 +13,9 @@ import string
 from pyparsing import * 
 
 
+__all__ = ['dump_textgrid2csv'] 
+
+
 SILS = [ ' ', 'SIL', 'n', '#', 'X']
 
 def dump_textgrid2csv(grid_file):

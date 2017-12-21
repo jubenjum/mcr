@@ -23,6 +23,9 @@ from sklearn.preprocessing import StandardScaler
 from mcr.util import load_config
 
 
+__all__ = ['dimension_reduction']
+
+
 REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
@@ -34,7 +37,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     
     Parameters
     ----------
-    features: list of list with floating point values (list)
+    features: list of numpy arrays with numeric floating point elements (list[numpy.ndarray])
     labels: values of the same size of features (list)
     red_method: the reduction method, valid methods are: 
                 'PCA', 'LDA', 'RAW', 'TSNE' (str)
@@ -44,7 +47,8 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
 
     Returns
     -------
-    reduced_embeddings: features with the lower dimension (numpy.ndarray)
+    shrinked_features: reduced dimension features with the same format that 
+                       features (list[numpy.ndarray])
     labels: list of label (numpy.ndarray)
 
 
@@ -67,20 +71,22 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
 
     if red_method == 'PCA' and is_matrix: 
 	pca = PCA(n_components=new_dimension)
-	reduced_embeddings = pca.fit_transform(X_feat)
+	shrinked_features = pca.fit_transform(X_feat)
 
     elif red_method == 'LDA' and is_matrix:
 	lda = LinearDiscriminantAnalysis(n_components=new_dimension)
-	reduced_embeddings = lda.fit_transform(X_feat, labels)
+	shrinked_features = lda.fit_transform(X_feat, labels)
     
     elif red_method == 'TSNE' and is_matrix:
         tsne = TSNE(n_components=new_dimension)
-        reduced_embeddings = tsne.fit_transform(X_feat)
+        shrinked_features = tsne.fit_transform(X_feat)
 
     else: # default = raw
-        reduced_embeddings = X_feat   
+        shrinked_features = X_feat   
 
-    return reduced_embeddings, labels
+    shrinked_features = [x for x in shrinked_features]
+
+    return shrinked_features, labels
 
 
 

@@ -13,28 +13,52 @@ from mcr.util import load_config
 import mcr.load_segmented
 
 
-def get_features(features_params, call_intervals, read_labels):
-    ''' get_features reads the wav files and returns the features 
-    for the selected intervals from the annotation file
-        
+__all__ = ['get_features', 'save_features']
+
+
+def save_features(fname, features, labels, sep=','):
+    '''
     Parameters
     ----------
-    features_params: parameters from the config file, loaded with mcr.util.load_config (dict)
-    call_intervals: arrays with structure = [wav_filename, start_time, end_time  ] (numpy.ndarray)
+
+
+    Returns
+    -------
+    
+    '''
+    new_labels = np.array([labels]).T
+    _, num_labels = new_labels.shape
+    new_features = np.array(features, dtype=np.float64)
+    _, num_features = new_features.shape
+    df = pd.DataFrame(np.hstack((new_labels, new_features)))
+
+
+
+
+def get_features(features_params, call_intervals, read_labels):
+    ''' get_features reads the wav files and returns the features
+    for the selected intervals from the annotation file
+
+    Parameters
+    ----------
+    features_params : parameters from the config file, loaded with mcr.util.load_config (dict)
+    call_intervals : arrays with structure = [wav_filename, start_time, end_time  ] (numpy.ndarray)
+    read_labels : labels for the call_intervals (numpy.ndarray)
 
     Returns
     -------
     features: features extracted from call_intervals files using parameters from 
-              the features_params  (list[numpy.ndarray])
-    labels: labels related to the features
+              the features_params, a list of numpy arrays is returned as it can
+              fit different size features (list[numpy.ndarray])
+    labels: labels related to the features (numpy.ndarray)
 
     '''
 
-    # if fix-stacksize is set to 0 it it will read all the interval from the transcriptions
+    ### if fix-stacksize is set to 0 it it will read all the interval from the transcriptions
     fix_stacksize = features_params['stacksize'][0]
 
     ###### FEATURES
-    features = []
+    features_ = []
 
     # in the pipeline wav files are at 16000Hz mono
     encoder = mcr.load_segmented.encoder_func(features_params) # use Spectral as default
@@ -50,9 +74,9 @@ def get_features(features_params, call_intervals, read_labels):
         else:
             feats = extract_func(sig, noise, start, end, encoder)
         
-        features.append(feats.flatten())
+        features_.append(feats.flatten())
     
-    return features, read_labels
+    return features_, read_labels
 
 
 def main():
