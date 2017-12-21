@@ -20,10 +20,23 @@ def save_features(fname, features, labels, sep=','):
     '''
     Parameters
     ----------
+    
+    fname : file, str
+        file name
+
+    features : list
+        features/embeddings that will be save
+
+    labels : list
+        labels for the features
+
+    sep : str [default=',']
+        field separation
 
 
     Returns
     -------
+    None
     
     '''
     new_labels = np.array([labels]).T
@@ -31,8 +44,7 @@ def save_features(fname, features, labels, sep=','):
     new_features = np.array(features, dtype=np.float64)
     _, num_features = new_features.shape
     df = pd.DataFrame(np.hstack((new_labels, new_features)))
-
-
+    df.to_csv(fname, sep=sep)
 
 
 def get_features(features_params, call_intervals, read_labels):
