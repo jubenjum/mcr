@@ -21,12 +21,14 @@ from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
 
 from mcr.util import load_config
+from mcr.util import TF_AutoEncoder 
 
+import ipdb
 
 __all__ = ['dimension_reduction']
 
 
-REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE']
+REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
 def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False):
@@ -40,7 +42,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     features: list of numpy arrays with numeric floating point elements (list[numpy.ndarray])
     labels: values of the same size of features (list)
     red_method: the reduction method, valid methods are: 
-                'PCA', 'LDA', 'RAW', 'TSNE' (str)
+                'PCA', 'LDA', 'RAW', 'TSNE', 'AE' (str)
     new_dimension: new dimension [int]
     standard_scaler: scale all features [bool]
 
@@ -80,6 +82,19 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     elif red_method == 'TSNE' and is_matrix:
         tsne = TSNE(n_components=new_dimension)
         shrinked_features = tsne.fit_transform(X_feat)
+
+    elif red_method == 'AE' and is_matrix:
+        n = len(X_feat)  
+        random_idx = np.random.permutation(n)
+        features = X_feat[random_idx]
+        labels = labels[random_idx]
+        
+        # Create an instance and encode
+        tf_ae = TF_AutoEncoder(features, labels)
+        tf_ae.fit(n_dimensions=new_dimension)
+        shrinked_features = tf_ae.reduce()
+        #colors = list(map(lambda x: color_mapping[x], labels))
+        #plt.scatter(auto_encoded[:, 0], auto_encoded[:, 1], c=colors)
 
     else: # default = raw
         shrinked_features = X_feat   
@@ -130,6 +145,7 @@ def main():
 
         if red_method=='RAW':
             red_method = None
+            new_dimension = config['dimension_reduction'][red_method]
         else:
             try:
                 new_dimension = config['dimension_reduction'][red_method]  # from the config file 

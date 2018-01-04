@@ -38,7 +38,7 @@ setup(
     zip_safe=False,
 
     scripts = ['bin/segmented_eval.py', 'bin/segmented_predict.py', 
-        'bin/segmented_train.py', 'bin/transcription_eval.py', 
+        'bin/segmented_train.py', 'bin/transcription_eval.py',  
         'bin/transcription_predict.py', 'bin/transcription_train.py' ],
 
     entry_points = {'console_scripts': 

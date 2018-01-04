@@ -19,6 +19,71 @@ import scipy.io.wavfile
 import toml
 import sklearn.metrics
 
+import tensorflow as tf
+
+
+def batch_generator(features, batch_size=100, n_epochs=1000):
+    """ Batch generator """
+
+    n = len(features)
+    # Generate batches
+    for epoch in range(n_epochs):
+        start_index = 0
+        while start_index != -1:
+            # Calculate the end index of the batch to generate
+            end_index = start_index + batch_size if start_index + batch_size < n else -1
+
+            yield features[start_index:end_index]
+
+            start_index = end_index
+
+
+# Auto Encoder
+class TF_AutoEncoder:
+    def __init__(self, features, labels, dtype=tf.float32):
+        self.features = features
+        self.labels = labels
+        self.dtype = dtype
+
+        self.encoder = dict()
+
+    def fit(self, n_dimensions):
+        graph = tf.Graph()
+        with graph.as_default():
+
+            # Input variable
+            X = tf.placeholder(self.dtype, shape=(None, self.features.shape[1]))
+
+            # Network variables
+            encoder_weights = tf.Variable(tf.random_normal(shape=(self.features.shape[1], n_dimensions)))
+            encoder_bias = tf.Variable(tf.zeros(shape=[n_dimensions]))
+
+            decoder_weights = tf.Variable(tf.random_normal(shape=(n_dimensions, self.features.shape[1])))
+            decoder_bias = tf.Variable(tf.zeros(shape=[self.features.shape[1]]))
+
+            # Encoder part
+            encoding = tf.nn.sigmoid(tf.add(tf.matmul(X, encoder_weights), encoder_bias))
+
+            # Decoder part
+            predicted_x = tf.nn.sigmoid(tf.add(tf.matmul(encoding, decoder_weights), decoder_bias))
+
+            # Define the cost function and optimizer to minimize squared error
+            cost = tf.reduce_mean(tf.pow(tf.subtract(predicted_x, X), 2))
+            optimizer = tf.train.AdamOptimizer().minimize(cost)
+
+        with tf.Session(graph=graph) as session:
+            # Initialize global variables
+            session.run(tf.global_variables_initializer())
+
+            for batch_x in batch_generator(self.features):
+                self.encoder['weights'], self.encoder['bias'], _ = session.run([encoder_weights, encoder_bias, optimizer],
+                                                                            feed_dict={X: batch_x})
+
+    def reduce(self):
+        return np.add(np.matmul(self.features, self.encoder['weights']), self.encoder['bias'])
+
+
+
 
 def make_f1_score(average):
     """Return sklearn-style scorer object which measures f1-score with the
