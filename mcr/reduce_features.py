@@ -80,7 +80,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
 	shrinked_features = lda.fit_transform(X_feat, labels)
     
     elif red_method == 'TSNE' and is_matrix:
-        tsne = TSNE(n_components=new_dimension)
+        tsne = TSNE(n_components=new_dimension, method='exact')
         shrinked_features = tsne.fit_transform(X_feat)
 
     elif red_method == 'AE' and is_matrix:
@@ -93,8 +93,6 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         tf_ae = TF_AutoEncoder(features, labels)
         tf_ae.fit(n_dimensions=new_dimension)
         shrinked_features = tf_ae.reduce()
-        #colors = list(map(lambda x: color_mapping[x], labels))
-        #plt.scatter(auto_encoded[:, 0], auto_encoded[:, 1], c=colors)
 
     else: # default = raw
         shrinked_features = X_feat   
@@ -122,7 +120,7 @@ def main():
             help='scale the features')
     
     parser.add_argument('-r', '--reduction', help=('use dimension reduction, '
-        'valid methods are raw, pca, lda or tsne'))
+        'valid methods are raw, pca, lda, tsne and ae [autoencoder]'))
     
     args = parser.parse_args()
     data_file = args.features_source
@@ -143,15 +141,11 @@ def main():
                   red_method))
             sys.exit()
 
-        if red_method=='RAW':
-            red_method = None
-            new_dimension = config['dimension_reduction'][red_method]
-        else:
-            try:
-                new_dimension = config['dimension_reduction'][red_method]  # from the config file 
-            except:
-                print('missing section dimension_reduction in config file [{}]'.format(red_method))
-                sys.exit()
+        try:
+            new_dimension = config['dimension_reduction'][red_method]  # from the config file 
+        except:
+            print('missing section dimension_reduction in config file [{}]'.format(red_method))
+            sys.exit()
 
     else: 
        red_method = None
