@@ -21,7 +21,7 @@ from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
 
 from mcr.util import load_config
-from mcr.util import TF_AutoEncoder 
+from mcr.util import KR_AutoEncoder
 
 import ipdb
 
@@ -36,12 +36,12 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
 
     The input features will be reduced with one of these methods (or raw output), it can be
     removed the std from the features using the std.
-    
+
     Parameters
     ----------
     features: list of numpy arrays with numeric floating point elements (list[numpy.ndarray])
     labels: values of the same size of features (list)
-    red_method: the reduction method, valid methods are: 
+    red_method: the reduction method, valid methods are:
                 'PCA', 'LDA', 'RAW', 'TSNE', 'AE' (str)
     new_dimension: new dimension [int]
     standard_scaler: scale all features [bool]
@@ -49,7 +49,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
 
     Returns
     -------
-    shrinked_features: reduced dimension features with the same format that 
+    shrinked_features: reduced dimension features with the same format that
                        features (list[numpy.ndarray])
     labels: list of label (numpy.ndarray)
 
@@ -63,7 +63,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     X_feat = np.array(features)
     labels = np.array(labels)
     is_matrix = False if np.object == X_feat.dtype else True
-   
+
     if not is_matrix and (red_method in MATRIX_METHODS):
         print('all features should have the same dimension')
         sys.exit()
@@ -72,35 +72,28 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         X_feat = StandardScaler().fit_transform(X_feat)
 
     if red_method == 'PCA' and is_matrix: 
-	pca = PCA(n_components=new_dimension)
-	shrinked_features = pca.fit_transform(X_feat)
+        pca = PCA(n_components=new_dimension)
+        shrinked_features = pca.fit_transform(X_feat)
 
     elif red_method == 'LDA' and is_matrix:
-	lda = LinearDiscriminantAnalysis(n_components=new_dimension)
-	shrinked_features = lda.fit_transform(X_feat, labels)
-    
+        lda = LinearDiscriminantAnalysis(n_components=new_dimension)
+        shrinked_features = lda.fit_transform(X_feat, labels)
+
     elif red_method == 'TSNE' and is_matrix:
         tsne = TSNE(n_components=new_dimension, method='exact')
         shrinked_features = tsne.fit_transform(X_feat)
 
     elif red_method == 'AE' and is_matrix:
-        n = len(X_feat)  
-        random_idx = np.random.permutation(n)
-        features = X_feat[random_idx]
-        labels = labels[random_idx]
-        
-        # Create an instance and encode
-        tf_ae = TF_AutoEncoder(features, labels)
-        tf_ae.fit(n_dimensions=new_dimension)
-        shrinked_features = tf_ae.reduce()
+        kr_ae = KR_AutoEncoder(X_feat, labels)
+        kr_ae.fit(n_dimensions=new_dimension)
+        shrinked_features = kr_ae.reduce()
 
     else: # default = raw
-        shrinked_features = X_feat   
+        shrinked_features = X_feat 
 
     shrinked_features = [x for x in shrinked_features]
 
     return shrinked_features, labels
-
 
 
 def main():
@@ -118,10 +111,10 @@ def main():
 
     parser.add_argument('--standard_scaler', action='store_true', default=False, required=False,
             help='scale the features')
-    
+
     parser.add_argument('-r', '--reduction', help=('use dimension reduction, '
         'valid methods are raw, pca, lda, tsne and ae [autoencoder]'))
-    
+
     args = parser.parse_args()
     data_file = args.features_source
     reduction_type = args.reduction
@@ -129,7 +122,6 @@ def main():
     output_csv = args.out_csv
     standard_scaler = args.standard_scaler
 
-     
     ###### CONFIGURATION
     config = load_config(config_file)
 
@@ -142,33 +134,33 @@ def main():
             sys.exit()
 
         try:
-            new_dimension = config['dimension_reduction'][red_method]  # from the config file 
+            new_dimension = config['dimension_reduction'][red_method]  # from the config file
         except:
             print('missing section dimension_reduction in config file [{}]'.format(red_method))
             sys.exit()
 
-    else: 
+    else:
        red_method = None
 
 
-    ###### FEATURES: where 
-    ## label,feat1,feat2..featNJ where J is the  total number of labels, N number of features 
-    
+    ###### FEATURES: where
+    ## label,feat1,feat2..featNJ where J is the  total number of labels, N number of features
+
     ## FIXME: what if the format changes?
     labels_from_csv = []
     features_from_csv = []
     with open(data_file, 'r') as dfile:
         for line in dfile.readlines():
-            row = line.strip().split(',') # TODO 
+            row = line.strip().split(',')
             labels_from_csv.append(row[0]) # label/call in the first column
             features_from_csv.append([float(x) for x in row[1:]])
 
 
     ###### FEATURES feature reduction
     features, labels = dimension_reduction(features_from_csv, labels_from_csv,
-                                           red_method, new_dimension, standard_scaler)   
+                                           red_method, new_dimension, standard_scaler)
 
-    with open(output_csv, 'w') as emb_csv: 
+    with open(output_csv, 'w') as emb_csv:
         for label, feats in zip(labels, features):
             t = '{},'.format(label) + ','.join(['{}'.format(x) for x in feats]) + '\n'
             emb_csv.write(t)
