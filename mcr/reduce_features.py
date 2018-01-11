@@ -16,23 +16,22 @@ np.seterr(under="ignore")
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import TruncatedSVD
 
 from mcr.util import load_config
 from mcr.util import KR_AutoEncoder
+from mcr.util import my_LinearDiscriminantAnalysis
 
-import ipdb
 
 __all__ = ['dimension_reduction']
 
-
-REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE']
+REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
 def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False):
-    ''' dimesion_deduction is a wrap to PCA, LDA and TSNE dimension reduciton methods
+    ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA dimension reduciton methods
 
     The input features will be reduced with one of these methods (or raw output), it can be
     removed the std from the features using the std.
@@ -42,7 +41,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     features: list of numpy arrays with numeric floating point elements (list[numpy.ndarray])
     labels: values of the same size of features (list)
     red_method: the reduction method, valid methods are:
-                'PCA', 'LDA', 'RAW', 'TSNE', 'AE' (str)
+                'PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSH' (str)
     new_dimension: new dimension [int]
     standard_scaler: scale all features [bool]
 
@@ -76,8 +75,13 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         shrinked_features = pca.fit_transform(X_feat)
 
     elif red_method == 'LDA' and is_matrix:
-        lda = LinearDiscriminantAnalysis(n_components=new_dimension)
-        shrinked_features = lda.fit_transform(X_feat, labels)
+        lda = my_LinearDiscriminantAnalysis(n_components=new_dimension)
+        lda.fit(X_feat, labels)
+        shrinked_features = lda.transform(X_feat)
+
+    elif red_method == 'LSA' and is_matrix:
+        lsa = TruncatedSVD(n_components=new_dimension, n_iter=50, random_state=42)
+        shrinked_features = lsa.fit_transform(X_feat)
 
     elif red_method == 'TSNE' and is_matrix:
         tsne = TSNE(n_components=new_dimension, method='exact')

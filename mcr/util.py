@@ -11,12 +11,17 @@ from itertools import product, tee
 from math import ceil, log
 from functools import partial
 import os.path
-import ipdb
 
 import numpy as np
 import scipy.io.wavfile
 import toml
 import sklearn.metrics
+
+# for my_LinearDiscriminantAnalysis
+import warnings
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.utils import check_X_y
+from sklearn.utils.multiclass import unique_labels
 
 from keras import regularizers
 from keras.layers import Input, Dense
@@ -90,6 +95,63 @@ class KR_AutoEncoder:
 
     def reduce(self):
         return self.encoder.predict(self.features)
+
+
+class my_LinearDiscriminantAnalysis(LinearDiscriminantAnalysis):
+
+    def fit(self, X, y):
+        """Fit LinearDiscriminantAnalysis model according to the given
+        training data and parameters.
+        .. versionchanged:: 0.19
+            *store_covariance* has been moved to main constructor.
+        .. versionchanged:: 0.19
+            *tol* has been moved to main constructor.
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training data.
+        y : array, shape (n_samples,)
+            Target values.
+        """
+        X, y = check_X_y(X, y, ensure_min_samples=2, estimator=self)
+        self.classes_ = unique_labels(y)
+
+        if self.priors is None:  # estimate priors from sample
+            _, y_t = np.unique(y, return_inverse=True)  # non-negative ints
+            self.priors_ = np.bincount(y_t) / float(len(y))
+        else:
+            self.priors_ = np.asarray(self.priors)
+
+        if (self.priors_ < 0).any():
+            raise ValueError("priors must be non-negative")
+        if self.priors_.sum() != 1:
+            warnings.warn("The priors do not sum to 1. Renormalizing",
+                        UserWarning)
+            self.priors_ = self.priors_ / self.priors_.sum()
+
+        # Get the maximum number of components
+        if self.n_components is None:
+            self._max_components = len(self.classes_) - 1
+        else:
+            self._max_components = max(len(self.classes_) - 1,
+                                    self.n_components)
+
+        if self.solver == 'svd':
+            if self.shrinkage is not None:
+                raise NotImplementedError('shrinkage not supported')
+            self._solve_svd(X, y)
+        elif self.solver == 'lsqr':
+            self._solve_lsqr(X, y, shrinkage=self.shrinkage)
+        elif self.solver == 'eigen':
+            self._solve_eigen(X, y, shrinkage=self.shrinkage)
+        else:
+            raise ValueError("unknown solver {} (valid solvers are 'svd', "
+                            "'lsqr', and 'eigen').".format(self.solver))
+        if self.classes_.size == 2:  # treat binary case as a special case
+            self.coef_ = np.array(self.coef_[1, :] - self.coef_[0, :], ndmin=2)
+            self.intercept_ = np.array(self.intercept_[1] - self.intercept_[0],
+                                    ndmin=1)
+        return self
 
 
 def make_f1_score(average):
