@@ -29,13 +29,13 @@ from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 
-# LSTM Encoder
+# LSTM Encoder https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_LSMTEncoder:
-    def __init__(self, features, labels):
+    def __init__(self, features, labels, input_dim=40):
         self.labels = labels
         self.num_feat, self.feat_dim = features.shape
-        self.timesteps = 50 # frames
-        self.input_dim = 40
+        self.input_dim = input_dim # size of the features/nfilt
+        self.timesteps = self.feat_dim // input_dim # frames
         self.features = features.reshape(self.num_feat, self.timesteps, self.input_dim)
 
     def fit(self, n_dimensions):
@@ -60,8 +60,7 @@ class KR_LSMTEncoder:
         return self.encoder.predict(self.features)
 
 
-# autoencoder
-# https://blog.keras.io/building-autoencoders-in-keras.html
+# autoencode https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_AutoEncoder:
     def __init__(self, features, labels):
         self.features = features

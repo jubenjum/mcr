@@ -20,7 +20,7 @@ def save_features(fname, features, labels, sep=','):
     '''
     Parameters
     ----------
-    
+
     fname : file, str
         file name
 
@@ -37,7 +37,7 @@ def save_features(fname, features, labels, sep=','):
     Returns
     -------
     None
-    
+
     '''
     new_labels = np.array([labels]).T
     _, num_labels = new_labels.shape
@@ -59,7 +59,7 @@ def get_features(features_params, call_intervals, read_labels):
 
     Returns
     -------
-    features: features extracted from call_intervals files using parameters from 
+    features: features extracted from call_intervals files using parameters from
               the features_params, a list of numpy arrays is returned as it can
               fit different size features (list[numpy.ndarray])
     labels: labels related to the features (numpy.ndarray)
@@ -81,13 +81,13 @@ def get_features(features_params, call_intervals, read_labels):
 
         extract_func = mcr.load_segmented.extract_features_fix_stacksize if fix_stacksize else \
                 mcr.load_segmented.extract_features
-        if fix_stacksize: 
+        if fix_stacksize:
             feats = extract_func(sig, noise, start, fix_stacksize, encoder)
         else:
             feats = extract_func(sig, noise, start, end, encoder)
-        
+
         features_.append(feats.flatten())
-    
+
     return features_, read_labels
 
 
@@ -103,7 +103,7 @@ def main():
     parser.add_argument('config_file', help='algorithm configuration file for the feature extration')
 
     parser.add_argument('-o', '--out_csv', help='output features and labels in csv format')
-    
+
     args = parser.parse_args()
 
     annotation_file = args.annotations_file
@@ -112,7 +112,7 @@ def main():
     ###### CONFIGURATION
     config = load_config(config_file)
     features_params = mcr.load_segmented.ensure_list(config['features'])
-    
+
     ###### READ ANNOTATIONS & GET FEATURES
     df = pd.read_csv(annotation_file)
     call_intervals = df[['filename', 'start', 'end']].values

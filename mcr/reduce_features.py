@@ -31,7 +31,7 @@ __all__ = ['dimension_reduction']
 REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
-def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False):
+def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False, config=None):
     ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA dimension reduciton methods
 
     The input features will be reduced with one of these methods (or raw output), it can be
@@ -59,6 +59,11 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     if red_method not in REDUCTION_METHODS:
         raise ValueError('red_method {} not supported'.format(red_method))
 
+    if config:
+        input_dim = config['features']['nfilt']
+    else:
+        input_dim = 40 # FIXME: change this hard typed value
+
     ###### FEATURES feature reduction
     X_feat = np.array(features)
     labels = np.array(labels)
@@ -71,7 +76,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     if standard_scaler and is_matrix:
         X_feat = StandardScaler().fit_transform(X_feat)
 
-    if red_method == 'PCA' and is_matrix: 
+    if red_method == 'PCA' and is_matrix:
         pca = PCA(n_components=new_dimension)
         shrinked_features = pca.fit_transform(X_feat)
 
@@ -89,8 +94,8 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         shrinked_features = tsne.fit_transform(X_feat)
 
     elif red_method == 'LSTM' and is_matrix:
-        kr_ae = KR_LSMTEncoder(X_feat, labels)
-        kr_ae.fit(n_dimensions=new_dimension)
+        kr_lstm = KR_LSMTEncoder(X_feat, labels, input_dim)
+        kr_lstm.fit(n_dimensions=new_dimension)
         shrinked_features = kr_ae.reduce()
 
     elif red_method == 'AE' and is_matrix:
@@ -168,7 +173,7 @@ def main():
 
     ###### FEATURES feature reduction
     features, labels = dimension_reduction(features_from_csv, labels_from_csv,
-                                           red_method, new_dimension, standard_scaler)
+                                           red_method, new_dimension, standard_scaler, config)
 
     with open(output_csv, 'w') as emb_csv:
         for label, feats in zip(labels, features):
