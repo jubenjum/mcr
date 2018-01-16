@@ -25,27 +25,44 @@ from sklearn.utils.multiclass import unique_labels
 
 from keras import regularizers
 from keras.layers import Input, Dense
+from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 
-# encoding a LSTM
+# LSTM Encoder
 class KR_LSMTEncoder:
-    ''' from '''
     def __init__(self, features, labels):
-        self.features = features
         self.labels = labels
         self.num_feat, self.feat_dim = features.shape
+        self.timesteps = 50 # frames
+        self.input_dim = 40
+        self.features = features.reshape(self.num_feat, self.timesteps, self.input_dim)
 
     def fit(self, n_dimensions):
-        pass
+        inputs = Input(shape=(self.timesteps, self.input_dim))
+        encoded = LSTM(n_dimensions)(inputs)
+
+        decoded = RepeatVector(self.timesteps)(encoded)
+        decoded = LSTM(self.input_dim, return_sequences=True)(decoded)
+
+        self.autoencoder = Model(inputs, decoded)
+        self.encoder = Model(inputs, encoded)
+
+        epochs=1000
+        callbacks = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
+        self.autoencoder.compile(optimizer='adadelta', loss='mse')
+        self.autoencoder.fit(self.features, self.features,
+                        shuffle=True, epochs=epochs, callbacks=callbacks,
+                        validation_data=(self.features, self.features))
+
 
     def reduce(self):
-        pass
+        return self.encoder.predict(self.features)
 
 
-# autoencoder using keras
+# autoencoder
+# https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_AutoEncoder:
-    ''' from https://blog.keras.io/building-autoencoders-in-keras.html '''
     def __init__(self, features, labels):
         self.features = features
         self.labels = labels
@@ -60,16 +77,16 @@ class KR_AutoEncoder:
         decoded = Dense(self.feat_dim)(encoded)
 
         #### DEFINE THE ENCODER LAYERS
-        ###encoded1 = Dense(encoding_dim*4, activation = 'relu')(input_call)
-        ###encoded2 = Dense(encoding_dim*3, activation = 'relu')(encoded1)
-        ###encoded3 = Dense(encoding_dim*2, activation = 'relu')(encoded2)
-        ###encoded = Dense(encoding_dim, activation = 'relu')(encoded3)
+        ###encoded = Dense(encoding_dim*4, activation = 'relu')(input_call)
+        ###encoded = Dense(encoding_dim*4, activation = 'relu')(encoded)
+        ###encoded = Dense(encoding_dim*4, activation = 'relu')(encoded)
+        ###encoded = Dense(encoding_dim, activation = 'relu')(encoded)
 
         #### DEFINE THE DECODER LAYERS
-        ###decoded1 = Dense(encoding_dim*2, activation = 'relu')(encoded)
-        ###decoded2 = Dense(encoding_dim*3, activation = 'relu')(decoded1)
-        ###decoded3 = Dense(encoding_dim*4, activation = 'relu')(decoded2)
-        ###decoded = Dense(self.feat_dim, activation = 'sigmoid')(decoded3)
+        ###decoded = Dense(encoding_dim*4, activation = 'relu')(encoded)
+        ###decoded = Dense(encoding_dim*4, activation = 'relu')(decoded)
+        ###decoded = Dense(encoding_dim*4, activation = 'relu')(decoded)
+        ###decoded = Dense(self.feat_dim, activation = 'sigmoid')(decoded)
 
         # this model maps an input to its reconstruction
         self.autoencoder = Model(input_call, decoded)
@@ -77,21 +94,24 @@ class KR_AutoEncoder:
         # this model maps an input to its encoded representation
         self.encoder = Model(input_call, encoded)
 
-        # create a placeholder for an encoded (32-dimensional) input
-        encoded_input = Input(shape=(encoding_dim,))
-
-	## retrieve the last layer of the autoencoder model
-        #decoder_layer = self.autoencoder.layers[-1]
-        ## create the decoder model
-        #decoder = Model(encoded_input, decoder_layer(encoded_input))
-
-        epochs=1000
+        epochs = 100000
         callbacks = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         #self.autoencoder.compile(optimizer='rmsprop', loss='mse')
         self.autoencoder.fit(self.features, self.features,
                         shuffle=True, epochs=epochs, callbacks=callbacks,
                         validation_data=(self.features, self.features))
+
+    def decode(self):
+        # create a placeholder for an encoded (32-dimensional) input
+        encoded_input = Input(shape=(encoding_dim,))
+
+        # retrieve the last layer of the autoencoder model
+        decoder_layer = self.autoencoder.layers[-1]
+
+        # create the decoder model
+        decoder = Model(encoded_input, decoder_layer(encoded_input))
+
 
     def reduce(self):
         return self.encoder.predict(self.features)

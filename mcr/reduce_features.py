@@ -22,12 +22,13 @@ from sklearn.decomposition import TruncatedSVD
 
 from mcr.util import load_config
 from mcr.util import KR_AutoEncoder
+from mcr.util import KR_LSMTEncoder
 from mcr.util import my_LinearDiscriminantAnalysis
 
 
 __all__ = ['dimension_reduction']
 
-REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA']
+REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
 def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False):
@@ -86,6 +87,11 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     elif red_method == 'TSNE' and is_matrix:
         tsne = TSNE(n_components=new_dimension, method='exact')
         shrinked_features = tsne.fit_transform(X_feat)
+
+    elif red_method == 'LSTM' and is_matrix:
+        kr_ae = KR_LSMTEncoder(X_feat, labels)
+        kr_ae.fit(n_dimensions=new_dimension)
+        shrinked_features = kr_ae.reduce()
 
     elif red_method == 'AE' and is_matrix:
         kr_ae = KR_AutoEncoder(X_feat, labels)
