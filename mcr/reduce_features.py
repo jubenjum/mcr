@@ -65,7 +65,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         input_dim = 40 # FIXME: change this hard typed value
 
     ###### FEATURES feature reduction
-    X_feat = np.array(features)
+    X_feat = pd.DataFrame(features).fillna(0.0).values
     labels = np.array(labels)
     is_matrix = False if np.object == X_feat.dtype else True
 
@@ -96,7 +96,7 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     elif red_method == 'LSTM' and is_matrix:
         kr_lstm = KR_LSMTEncoder(X_feat, labels, input_dim)
         kr_lstm.fit(n_dimensions=new_dimension)
-        shrinked_features = kr_ae.reduce()
+        shrinked_features = kr_lstm.reduce()
 
     elif red_method == 'AE' and is_matrix:
         kr_ae = KR_AutoEncoder(X_feat, labels)

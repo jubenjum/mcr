@@ -29,6 +29,8 @@ from keras.layers import Input, Dense
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
+from keras.callbacks import TensorBoard
+
 
 def normalize(features):
     ''' Normalize features in the range (0,1)'''
@@ -57,10 +59,11 @@ class KR_LSMTEncoder:
         self.encoder = Model(inputs, encoded)
 
         epochs=1000
-        callbacks = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
+        tensorboard = TensorBoard(log_dir='./Graph', histogram_freq=0, write_graph=True, write_images=True)
+        stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         self.autoencoder.fit(self.features, self.features,
-                        shuffle=True, epochs=epochs, callbacks=callbacks,
+                        shuffle=True, epochs=epochs, callbacks=[stop_callback, tensorboard],
                         validation_data=(self.features, self.features))
 
     def reduce(self):
@@ -76,23 +79,18 @@ class KR_AutoEncoder:
         self.num_feat, self.feat_dim = features.shape
 
     def fit(self, n_dimensions):
-        encoding_dim = n_dimensions
         input_call = Input(shape=(self.feat_dim,))
 
-        encoded = Dense(encoding_dim, activation='sigmoid',
+        encoded = Dense(n_dimensions, activation='sigmoid',
                         activity_regularizer=regularizers.l1(10e-5))(input_call)
         decoded = Dense(self.feat_dim)(encoded)
 
         #### DEFINE THE ENCODER LAYERS
-        ###encoded = Dense(encoding_dim*4, activation = 'relu')(input_call)
-        ###encoded = Dense(encoding_dim*4, activation = 'relu')(encoded)
-        ###encoded = Dense(encoding_dim*4, activation = 'relu')(encoded)
-        ###encoded = Dense(encoding_dim, activation = 'relu')(encoded)
+        ###encoded = Dense(n_dimensions*4, activation = 'relu')(input_call)
+        ###encoded = Dense(n_dimensions, activation = 'relu')(encoded)
 
         #### DEFINE THE DECODER LAYERS
-        ###decoded = Dense(encoding_dim*4, activation = 'relu')(encoded)
-        ###decoded = Dense(encoding_dim*4, activation = 'relu')(decoded)
-        ###decoded = Dense(encoding_dim*4, activation = 'relu')(decoded)
+        ###decoded = Dense(n_dimensions*4, activation = 'relu')(encoded)
         ###decoded = Dense(self.feat_dim, activation = 'sigmoid')(decoded)
 
         # this model maps an input to its reconstruction
@@ -102,16 +100,19 @@ class KR_AutoEncoder:
         self.encoder = Model(input_call, encoded)
 
         epochs = 1000
-        callbacks = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         #self.autoencoder.compile(optimizer='rmsprop', loss='mse')
+        tensorboard = TensorBoard(log_dir='Graph', histogram_freq=0, write_graph=True, write_images=True)
+        tensorboard.set_model(self.autoencoder)
+
+        stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.fit(self.features, self.features,
-                        shuffle=True, epochs=epochs, callbacks=callbacks,
+                        shuffle=True, epochs=epochs, callbacks=stop_callback,
                         validation_data=(self.features, self.features))
 
     def decode(self):
         # create a placeholder for an encoded (32-dimensional) input
-        encoded_input = Input(shape=(encoding_dim,))
+        encoded_input = Input(shape=(n_dimensions,))
 
         # retrieve the last layer of the autoencoder model
         decoder_layer = self.autoencoder.layers[-1]
