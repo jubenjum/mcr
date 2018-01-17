@@ -1,7 +1,7 @@
 .PHONY: test
 
 test: mcr/extract_features.py mcr/reduce_features.py mcr/util.py
-	python mcr/utils.py -v 
+	python mcr/util.py -v 
 
 clean:
 	python setup.py clean
