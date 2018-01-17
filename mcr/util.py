@@ -21,6 +21,7 @@ import sklearn.metrics
 import warnings
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.utils import check_X_y
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils.multiclass import unique_labels
 
 from keras import regularizers
@@ -29,6 +30,10 @@ from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 
+def normalize(features):
+    ''' Normalize features in the range (0,1)'''
+    return (features - features.min()) / (features.max() - features.min())
+
 # LSTM Encoder https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_LSMTEncoder:
     def __init__(self, features, labels, input_dim=40):
@@ -36,6 +41,9 @@ class KR_LSMTEncoder:
         self.num_feat, self.feat_dim = features.shape
         self.input_dim = input_dim # size of the features/nfilt
         self.timesteps = self.feat_dim // input_dim # frames
+
+        # keras need normalized features between (0,1)
+        #features = normalize(features) 
         self.features = features.reshape(self.num_feat, self.timesteps, self.input_dim)
 
     def fit(self, n_dimensions):
@@ -55,7 +63,6 @@ class KR_LSMTEncoder:
                         shuffle=True, epochs=epochs, callbacks=callbacks,
                         validation_data=(self.features, self.features))
 
-
     def reduce(self):
         return self.encoder.predict(self.features)
 
@@ -63,6 +70,7 @@ class KR_LSMTEncoder:
 # autoencode https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_AutoEncoder:
     def __init__(self, features, labels):
+        #self.features = normalize(features)
         self.features = features
         self.labels = labels
         self.num_feat, self.feat_dim = features.shape
@@ -93,7 +101,7 @@ class KR_AutoEncoder:
         # this model maps an input to its encoded representation
         self.encoder = Model(input_call, encoded)
 
-        epochs = 100000
+        epochs = 1000
         callbacks = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         #self.autoencoder.compile(optimizer='rmsprop', loss='mse')
@@ -275,7 +283,14 @@ def pretty_cm(cm, labels, hide_zeros=False, offset=''):
 
 
 def string_to_bool(s):
-    """yeah.
+    """ convert the strings 'True' in True and 'False' in False
+
+    >>> string_to_bool('True')
+    True
+
+    >>> string_to_bool('False')
+    False
+
     """
     if s == 'True':
         return True
@@ -310,3 +325,7 @@ def encode_symbol_range(high,
             )
         )
     )
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
