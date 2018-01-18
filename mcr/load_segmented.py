@@ -19,7 +19,6 @@ from spectral import Spectral
 from zca import ZCA
 from util import wavread
 
-import ipdb
 
 
 ## helper functions for the FeatureLoader class
