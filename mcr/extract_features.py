@@ -11,7 +11,9 @@ import numpy as np
 
 from mcr.util import load_config
 import mcr.load_segmented
+from mcr.utils import build_cache
 
+memory = build_cache()
 
 __all__ = ['get_features', 'save_features']
 
@@ -47,6 +49,7 @@ def save_features(fname, features, labels, sep=','):
     df.to_csv(fname, sep=sep)
 
 
+@memory.cache
 def get_features(features_params, call_intervals, read_labels):
     ''' get_features reads the wav files and returns the features
     for the selected intervals from the annotation file

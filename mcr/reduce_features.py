@@ -24,13 +24,17 @@ from mcr.util import load_config
 from mcr.util import KR_AutoEncoder
 from mcr.util import KR_LSMTEncoder
 from mcr.util import my_LinearDiscriminantAnalysis
+from mcr.utils import build_cache
 
+memory = build_cache()
 
 __all__ = ['dimension_reduction']
 
 REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM']
 MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
 
+
+@memory.cache
 def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False, config=None):
     ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA dimension reduciton methods
 

@@ -12,10 +12,13 @@ from math import ceil, log
 from functools import partial
 import os.path
 
+
+from joblib import Memory
 import numpy as np
 import scipy.io.wavfile
 import toml
 import sklearn.metrics
+
 
 # for my_LinearDiscriminantAnalysis
 import warnings
@@ -24,13 +27,25 @@ from sklearn.utils import check_X_y
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils.multiclass import unique_labels
 
+
 from keras import regularizers
 from keras.layers import Input, Dense
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
-from keras.callbacks import TensorBoard
 
+# creating a global memory for the package in the directory where the scripts are running
+def get_cache_dir():
+    ''' get the directory where the cache is stored, by default it will create a
+    directory ".cache" in the current directory
+    '''
+    cdir = os.curdir+'/.cache'
+    if not os.path.exists(cdir):
+        os.makedirs(cdir)
+
+    return cdir
+
+memory = Memory(cachedir=get_cache_dir(), verbose=0)
 
 def normalize(features):
     ''' Normalize features in the range (0,1)'''
@@ -59,11 +74,10 @@ class KR_LSMTEncoder:
         self.encoder = Model(inputs, encoded)
 
         epochs=1000
-        tensorboard = TensorBoard(log_dir='./Graph', histogram_freq=0, write_graph=True, write_images=True)
         stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         self.autoencoder.fit(self.features, self.features,
-                        shuffle=True, epochs=epochs, callbacks=[stop_callback, tensorboard],
+                        shuffle=True, epochs=epochs, callbacks=stop_callback,
                         validation_data=(self.features, self.features))
 
     def reduce(self):
@@ -102,8 +116,6 @@ class KR_AutoEncoder:
         epochs = 1000
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         #self.autoencoder.compile(optimizer='rmsprop', loss='mse')
-        tensorboard = TensorBoard(log_dir='Graph', histogram_freq=0, write_graph=True, write_images=True)
-        tensorboard.set_model(self.autoencoder)
 
         stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
         self.autoencoder.fit(self.features, self.features,
