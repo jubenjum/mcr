@@ -45,7 +45,13 @@ def get_cache_dir():
 
     return cdir
 
-memory = Memory(cachedir=get_cache_dir(), verbose=0)
+
+def build_cache():
+    return Memory(cachedir=get_cache_dir(), verbose=0)
+
+
+memory = build_cache() 
+
 
 def normalize(features):
     ''' Normalize features in the range (0,1)'''
