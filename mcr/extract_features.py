@@ -11,7 +11,7 @@ import numpy as np
 
 from mcr.util import load_config
 import mcr.load_segmented
-from mcr.utils import build_cache
+from mcr.util import build_cache
 
 memory = build_cache()
 

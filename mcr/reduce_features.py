@@ -24,7 +24,7 @@ from mcr.util import load_config
 from mcr.util import KR_AutoEncoder
 from mcr.util import KR_LSMTEncoder
 from mcr.util import my_LinearDiscriminantAnalysis
-from mcr.utils import build_cache
+from mcr.util import build_cache
 
 memory = build_cache()
 
