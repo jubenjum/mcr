@@ -19,15 +19,18 @@ __all__ = ['get_features', 'save_features']
 
 
 def save_features(fname, features, labels, sep=','):
-    '''
+    ''' save_features save the features and labels in a csv file.
+
+    In the first column are stored the labels, and the rest of columns
+    contains the features. 
+
     Parameters
     ----------
-
     fname : file, str
         file name
 
     features : list
-        features/embeddings that will be save
+        features/embeddings that will be saved.
 
     labels : list
         labels for the features
@@ -38,7 +41,8 @@ def save_features(fname, features, labels, sep=','):
 
     Returns
     -------
-    None
+
+    A csv file with the name set by fname variable
 
     '''
     new_labels = np.array([labels]).T

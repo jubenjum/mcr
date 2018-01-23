@@ -5,7 +5,7 @@ reduce_features: reduce features from the csv files.
 """
 
 import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore")
 import operator
 import sys
 

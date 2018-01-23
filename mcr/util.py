@@ -42,7 +42,6 @@ def get_cache_dir():
     cdir = os.curdir+'/.cache'
     if not os.path.exists(cdir):
         os.makedirs(cdir)
-
     return cdir
 
 
