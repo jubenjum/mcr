@@ -19,7 +19,7 @@ dependency_links = [  ]
 
 setup(
     name='mcr',
-    version='0.1',
+    version='0.2',
     description='DESCRIPTION',
     long_description=readme + '\n\n' ,
     
