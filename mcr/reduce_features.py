@@ -5,16 +5,11 @@ reduce_features: reduce features from the csv files.
 """
 
 import warnings
-warnings.filterwarnings("ignore")
-import operator
 import sys
 
 import pandas as pd
 import numpy as np
-np.seterr(all='raise')
-np.seterr(under="ignore")
 
-from sklearn.model_selection import ParameterGrid
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
@@ -26,24 +21,34 @@ from mcr.util import KR_LSMTEncoder
 from mcr.util import my_LinearDiscriminantAnalysis
 from mcr.util import build_cache
 
+
+# Modules configuration
+warnings.filterwarnings("ignore")
+np.seterr(all='raise')
+np.seterr(under="ignore")
+
+
 memory = build_cache()
 
 __all__ = ['dimension_reduction']
 
-REDUCTION_METHODS =  ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM']
-MATRIX_METHODS =  ['PCA', 'LDA', 'TSNE']
+REDUCTION_METHODS = ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM']
+MATRIX_METHODS = ['PCA', 'LDA', 'TSNE']
 
 
 @memory.cache
-def dimension_reduction(features, labels, red_method, new_dimension, standard_scaler=False, config=None):
-    ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA dimension reduciton methods
+def dimension_reduction(features, labels, red_method, new_dimension,
+                        standard_scaler=False, config=None):
+    ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA dimension
+    reduction methods
 
-    The input features will be reduced with one of these methods (or raw output), it can be
-    removed the std from the features using the std.
+    The input features will be reduced with one of these methods (or raw
+    output), it can be removed the std from the features using the std.
 
     Parameters
     ----------
-    features: list of numpy arrays with numeric floating point elements (list[numpy.ndarray])
+    features: list of numpy arrays with numeric floating point elements
+              (list[numpy.ndarray])
     labels: values of the same size of features (list)
     red_method: the reduction method, valid methods are:
                 'PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSH' (str)
@@ -66,9 +71,9 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
     if config:
         input_dim = config['features']['nfilt']
     else:
-        input_dim = 40 # FIXME: change this hard typed value
+        input_dim = 40  # FIXME: change this hard typed value
 
-    ###### FEATURES feature reduction
+    # FEATURES feature reduction
     X_feat = pd.DataFrame(features).fillna(0.0).values
     labels = np.array(labels)
     is_matrix = False if np.object == X_feat.dtype else True
@@ -90,11 +95,13 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         shrinked_features = lda.transform(X_feat)
 
     elif red_method == 'LSA' and is_matrix:
-        lsa = TruncatedSVD(n_components=new_dimension, n_iter=50, random_state=42)
+        lsa = TruncatedSVD(n_components=new_dimension, n_iter=50,
+                           algorithm='arpack', random_state=42)
         shrinked_features = lsa.fit_transform(X_feat)
 
     elif red_method == 'TSNE' and is_matrix:
-        tsne = TSNE(n_components=new_dimension, method='exact')
+        tsne = TSNE(n_components=new_dimension, method='exact',
+                    random_state=42)
         shrinked_features = tsne.fit_transform(X_feat)
 
     elif red_method == 'LSTM' and is_matrix:
@@ -107,8 +114,8 @@ def dimension_reduction(features, labels, red_method, new_dimension, standard_sc
         kr_ae.fit(n_dimensions=new_dimension)
         shrinked_features = kr_ae.reduce()
 
-    else: # default = raw
-        shrinked_features = X_feat 
+    else:  # default = raw
+        shrinked_features = X_feat
 
     shrinked_features = [x for x in shrinked_features]
 
@@ -119,8 +126,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(prog=sys.argv[0],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='prepare the csv or abx files to compute ABX score')
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='prepare the csv or abx files to compute ABX score')
 
     parser.add_argument('features_source', help='csv file contining hte features')
 
@@ -132,7 +139,7 @@ def main():
             help='scale the features')
 
     parser.add_argument('-r', '--reduction', help=('use dimension reduction, '
-        'valid methods are raw, pca, lda, tsne and ae [autoencoder]'))
+                                                   'valid methods are raw, pca,lda, tsne and ae [autoencoder]'))
 
     args = parser.parse_args()
     data_file = args.features_source
@@ -141,7 +148,7 @@ def main():
     output_csv = args.out_csv
     standard_scaler = args.standard_scaler
 
-    ###### CONFIGURATION
+    # CONFIGURATION
     config = load_config(config_file)
 
     if reduction_type:
@@ -161,11 +168,10 @@ def main():
     else:
        red_method = None
 
+    # FEATURES format:
+    # label,feat1,feat2..featNJ where J is the  total number of labels, N number of features
 
-    ###### FEATURES: where
-    ## label,feat1,feat2..featNJ where J is the  total number of labels, N number of features
-
-    ## FIXME: what if the format changes?
+    # FIXME: what if the format changes?
     labels_from_csv = []
     features_from_csv = []
     with open(data_file, 'r') as dfile:
@@ -175,7 +181,7 @@ def main():
             features_from_csv.append([float(x) for x in row[1:]])
 
 
-    ###### FEATURES feature reduction
+    # FEATURES feature reduction
     features, labels = dimension_reduction(features_from_csv, labels_from_csv,
                                            red_method, new_dimension, standard_scaler, config)
 
