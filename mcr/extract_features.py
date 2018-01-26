@@ -73,10 +73,10 @@ def get_features(features_params, call_intervals, read_labels):
 
     '''
 
-    ### if fix-stacksize is set to 0 it it will read all the interval from the transcriptions
+    # if fix-stacksize is set to 0 it it will read all the interval from the transcriptions
     fix_stacksize = features_params['stacksize'][0]
 
-    ###### FEATURES
+    # FEATURES
     features_ = []
 
     # in the pipeline wav files are at 16000Hz mono
@@ -86,8 +86,9 @@ def get_features(features_params, call_intervals, read_labels):
         sig = mcr.load_segmented.load_wav(fname)
         noise = mcr.load_segmented.extract_noise(sig, features_params, encoder)
 
-        extract_func = mcr.load_segmented.extract_features_fix_stacksize if fix_stacksize else \
-                mcr.load_segmented.extract_features
+        extract_func = mcr.load_segmented.extract_features_fix_stacksize \
+                       if fix_stacksize else mcr.load_segmented.extract_features
+
         if fix_stacksize:
             feats = extract_func(sig, noise, start, fix_stacksize, encoder)
         else:
@@ -101,9 +102,9 @@ def get_features(features_params, call_intervals, read_labels):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser( prog=sys.argv[0],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description='prepare the csv files to build abx files')
+    parser = argparse.ArgumentParser(prog=sys.argv[0],
+                                     formatter_class=argparse.RawDescriptionHelpFormatter,
+                                     description='prepare the csv files to build abx files')
 
     parser.add_argument('annotations_file', help='file with the stimuli source: wav_file, interval, label ')
 
@@ -116,15 +117,16 @@ def main():
     annotation_file = args.annotations_file
     config_file = args.config_file
 
-    ###### CONFIGURATION
+    # CONFIGURATION
     config = load_config(config_file)
     features_params = mcr.load_segmented.ensure_list(config['features'])
 
-    ###### READ ANNOTATIONS & GET FEATURES
+    # READ ANNOTATIONS & GET FEATURES
     df = pd.read_csv(annotation_file)
     call_intervals = df[['filename', 'start', 'end']].values
     read_labels = df['label'].values
-    features, labels = get_features(features_params, call_intervals, read_labels)
+    features, labels = get_features(features_params, call_intervals,
+                                    read_labels)
 
     # write the csv file
     with open(args.out_csv, 'w') as emb_csv:

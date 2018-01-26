@@ -15,6 +15,7 @@ import os.path
 
 from joblib import Memory
 import numpy as np
+
 import scipy.io.wavfile
 import toml
 import sklearn.metrics
@@ -24,15 +25,18 @@ import sklearn.metrics
 import warnings
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.utils import check_X_y
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils.multiclass import unique_labels
 
-
+# for AutoEncoder and LSTM
 from keras import regularizers
 from keras.layers import Input, Dense
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
+
+# Module initialization
+np.random.seed(42)
+
 
 # creating a global memory for the package in the directory where the scripts are running
 def get_cache_dir():
@@ -49,23 +53,24 @@ def build_cache():
     return Memory(cachedir=get_cache_dir(), verbose=0)
 
 
-memory = build_cache() 
+memory = build_cache()
 
 
 def normalize(features):
     ''' Normalize features in the range (0,1)'''
     return (features - features.min()) / (features.max() - features.min())
 
+
 # LSTM Encoder https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_LSMTEncoder:
     def __init__(self, features, labels, input_dim=40):
         self.labels = labels
         self.num_feat, self.feat_dim = features.shape
-        self.input_dim = input_dim # size of the features/nfilt
-        self.timesteps = self.feat_dim // input_dim # frames
+        self.input_dim = input_dim  # size of the features/nfilt
+        self.timesteps = self.feat_dim // input_dim  # frames
 
         # keras need normalized features between (0,1)
-        #features = normalize(features) 
+        # features = normalize(features)
         self.features = features.reshape(self.num_feat, self.timesteps, self.input_dim)
 
     def fit(self, n_dimensions):
@@ -78,12 +83,15 @@ class KR_LSMTEncoder:
         self.autoencoder = Model(inputs, decoded)
         self.encoder = Model(inputs, encoded)
 
-        epochs=1000
-        stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
+        epochs = 1000
+        stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10,
+                                       verbose=0), ]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
         self.autoencoder.fit(self.features, self.features,
-                        shuffle=True, epochs=epochs, callbacks=stop_callback,
-                        validation_data=(self.features, self.features))
+                             shuffle=False,
+                             epochs=epochs,
+                             callbacks=stop_callback,
+                             validation_data=(self.features, self.features))
 
     def reduce(self):
         return self.encoder.predict(self.features)
@@ -92,25 +100,26 @@ class KR_LSMTEncoder:
 # autoencode https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_AutoEncoder:
     def __init__(self, features, labels):
-        #self.features = normalize(features)
+        # self.features = normalize(features)
         self.features = features
         self.labels = labels
         self.num_feat, self.feat_dim = features.shape
 
     def fit(self, n_dimensions):
+        self.n_dimensions = n_dimensions
         input_call = Input(shape=(self.feat_dim,))
 
         encoded = Dense(n_dimensions, activation='sigmoid',
                         activity_regularizer=regularizers.l1(10e-5))(input_call)
         decoded = Dense(self.feat_dim)(encoded)
 
-        #### DEFINE THE ENCODER LAYERS
-        ###encoded = Dense(n_dimensions*4, activation = 'relu')(input_call)
-        ###encoded = Dense(n_dimensions, activation = 'relu')(encoded)
+        # # DEFINE THE ENCODER LAYERS
+        # encoded = Dense(n_dimensions*4, activation = 'relu')(input_call)
+        # encoded = Dense(n_dimensions, activation = 'relu')(encoded)
 
-        #### DEFINE THE DECODER LAYERS
-        ###decoded = Dense(n_dimensions*4, activation = 'relu')(encoded)
-        ###decoded = Dense(self.feat_dim, activation = 'sigmoid')(decoded)
+        # # DEFINE THE DECODER LAYERS
+        # decoded = Dense(n_dimensions*4, activation = 'relu')(encoded)
+        # decoded = Dense(self.feat_dim, activation = 'sigmoid')(decoded)
 
         # this model maps an input to its reconstruction
         self.autoencoder = Model(input_call, decoded)
@@ -120,16 +129,19 @@ class KR_AutoEncoder:
 
         epochs = 1000
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
-        #self.autoencoder.compile(optimizer='rmsprop', loss='mse')
+        # self.autoencoder.compile(optimizer='rmsprop', loss='mse')
 
-        stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10, verbose=0),]
+        stop_callback = [EarlyStopping(monitor='val_loss',
+                                       patience=epochs//10, verbose=0), ]
         self.autoencoder.fit(self.features, self.features,
-                        shuffle=True, epochs=epochs, callbacks=stop_callback,
-                        validation_data=(self.features, self.features))
+                             shuffle=False,
+                             epochs=epochs,
+                             callbacks=stop_callback,
+                             validation_data=(self.features, self.features))
 
     def decode(self):
         # create a placeholder for an encoded (32-dimensional) input
-        encoded_input = Input(shape=(n_dimensions,))
+        encoded_input = Input(shape=(self.n_dimensions,))
 
         # retrieve the last layer of the autoencoder model
         decoder_layer = self.autoencoder.layers[-1]
@@ -170,8 +182,7 @@ class my_LinearDiscriminantAnalysis(LinearDiscriminantAnalysis):
         if (self.priors_ < 0).any():
             raise ValueError("priors must be non-negative")
         if self.priors_.sum() != 1:
-            warnings.warn("The priors do not sum to 1. Renormalizing",
-                        UserWarning)
+            warnings.warn("The priors do not sum to 1. Renormalizing", UserWarning)
             self.priors_ = self.priors_ / self.priors_.sum()
 
         # Get the maximum number of components
