@@ -74,7 +74,7 @@ def dimension_reduction(features, labels, red_method, new_dimension,
         input_dim = 40  # FIXME: change this hard typed value
 
     # FEATURES feature reduction
-    X_feat = pd.DataFrame(features).fillna(0.0).values
+    X_feat = pd.DataFrame(features).values
     labels = np.array(labels)
     is_matrix = False if np.object == X_feat.dtype else True
 
@@ -82,7 +82,7 @@ def dimension_reduction(features, labels, red_method, new_dimension,
         print('all features should have the same dimension')
         sys.exit()
 
-    if standard_scaler and is_matrix:
+    if standard_scaler and is_matrix and np.isnan(X_feat).all():
         X_feat = StandardScaler().fit_transform(X_feat)
 
     if red_method == 'PCA' and is_matrix:
@@ -169,7 +169,7 @@ def main():
        red_method = None
 
     # FEATURES format:
-    # label,feat1,feat2..featNJ where J is the  total number of labels, N number of features
+    # label,f1,f2..fNJ where J is the total number of labels N number of features
 
     # FIXME: what if the format changes?
     labels_from_csv = []
@@ -177,17 +177,18 @@ def main():
     with open(data_file, 'r') as dfile:
         for line in dfile.readlines():
             row = line.strip().split(',')
-            labels_from_csv.append(row[0]) # label/call in the first column
+            labels_from_csv.append(row[0])  # label/call in the first column
             features_from_csv.append([float(x) for x in row[1:]])
-
 
     # FEATURES feature reduction
     features, labels = dimension_reduction(features_from_csv, labels_from_csv,
-                                           red_method, new_dimension, standard_scaler, config)
+                                           red_method, new_dimension,
+                                           standard_scaler, config)
 
     with open(output_csv, 'w') as emb_csv:
         for label, feats in zip(labels, features):
-            t = '{},'.format(label) + ','.join(['{}'.format(x) for x in feats]) + '\n'
+            t = '{},'.format(label) + ','.join(['{}'.format(x)
+                                                for x in feats]) + '\n'
             emb_csv.write(t)
 
 

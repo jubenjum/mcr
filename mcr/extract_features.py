@@ -22,7 +22,7 @@ def save_features(fname, features, labels, sep=','):
     ''' save_features save the features and labels in a csv file.
 
     In the first column are stored the labels, and the rest of columns
-    contains the features. 
+    contains the features.
 
     Parameters
     ----------
@@ -61,7 +61,7 @@ def get_features(features_params, call_intervals, read_labels):
     Parameters
     ----------
     features_params : parameters from the config file, loaded with mcr.util.load_config (dict)
-    call_intervals : arrays with structure = [wav_filename, start_time, end_time  ] (numpy.ndarray)
+    call_intervals : arrays with structure = [wav_filename, start_time, end_time] (numpy.ndarray)
     read_labels : labels for the call_intervals (numpy.ndarray)
 
     Returns
@@ -93,6 +93,7 @@ def get_features(features_params, call_intervals, read_labels):
             feats = extract_func(sig, noise, start, fix_stacksize, encoder)
         else:
             feats = extract_func(sig, noise, start, end, encoder)
+
 
         features_.append(feats.flatten())
 

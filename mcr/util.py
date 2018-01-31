@@ -3,15 +3,17 @@ util: miscellaneous helper functions
 """
 from __future__ import division, print_function
 
-from time import time
-import sys
-from contextlib import contextmanager
+import random
 import string
+import sys
+import os.path
+
+from time import time
+from contextlib import contextmanager
 from itertools import product, tee
 from math import ceil, log
 from functools import partial
-import os.path
-
+from itertools import cycle
 
 from joblib import Memory
 import numpy as np
@@ -29,7 +31,7 @@ from sklearn.utils.multiclass import unique_labels
 
 # for AutoEncoder and LSTM
 from keras import regularizers
-from keras.layers import Input, Dense
+from keras.layers import Input, Dense, Masking, BatchNormalization
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
@@ -38,7 +40,8 @@ from keras.callbacks import EarlyStopping
 np.random.seed(42)
 
 
-# creating a global memory for the package in the directory where the scripts are running
+# creating a global memory for the package in the directory
+# where the scripts are running
 def get_cache_dir():
     ''' get the directory where the cache is stored, by default it will create a
     directory ".cache" in the current directory
@@ -57,25 +60,52 @@ memory = build_cache()
 
 
 def normalize(features):
-    ''' Normalize features in the range (0,1)'''
-    return (features - features.min()) / (features.max() - features.min())
+    ''' Normalize features in the range (0,1) '''
+    x = np.ma.array(features, mask=np.isnan(features))
+    x_ = (x - x.min()) / (x.max() - x.min()) + np.finfo(float).eps
+    x_norm = x_.data
+    x_norm[x.mask] = 0.0
+    return x_norm
 
 
 # LSTM Encoder https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_LSMTEncoder:
     def __init__(self, features, labels, input_dim=40):
-        self.labels = labels
         self.num_feat, self.feat_dim = features.shape
-        self.input_dim = input_dim  # size of the features/nfilt
         self.timesteps = self.feat_dim // input_dim  # frames
+        self.input_dim = input_dim  # size of the features/nfilt
+        self.labels = labels
 
-        # keras need normalized features between (0,1)
+        # normalize and set nan as a mask
+        features = normalize(features)
         # features = normalize(features)
-        self.features = features.reshape(self.num_feat, self.timesteps, self.input_dim)
+        # features[np.isnan(features)] = 0.0
+
+        # make a reproducible shuffle of data, the cache will be the same
+        random.seed(42)
+        shuffled_range = range(self.num_feat)
+        random.shuffle(shuffled_range)
+        self.features_ = features[shuffled_range]
+        self.to_predict = features[:]
+
+        # # rebuild features without void values and with new dimensions
+        # self.features = np.array([x[~np.isnan(x)] for x in self.features_])
+        # self.features = np.array([x.reshape(1, len(x)//input_dim, input_dim)
+        #                           for x in self.features])
+
+        self.features = np.array([x.reshape(len(x)//input_dim, input_dim)
+                                    for x in self.features_])
+
+    def _generate(self):
+        for x in cycle(self.features):
+            yield (x, x)
 
     def fit(self, n_dimensions):
+
         inputs = Input(shape=(self.timesteps, self.input_dim))
-        encoded = LSTM(n_dimensions)(inputs)
+        mask = Masking(mask_value=0.0)(inputs)
+        #inputs = Input(shape=(None, self.input_dim))
+        encoded = LSTM(n_dimensions, return_sequences=False)(mask)
 
         decoded = RepeatVector(self.timesteps)(encoded)
         decoded = LSTM(self.input_dim, return_sequences=True)(decoded)
@@ -87,6 +117,12 @@ class KR_LSMTEncoder:
         stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10,
                                        verbose=0), ]
         self.autoencoder.compile(optimizer='adadelta', loss='mse')
+
+        # self.autoencoder.fit_generator(self._generate(),
+        #                                steps_per_epoch=100,
+        #                                epochs=epochs,
+        #                                shuffle=False)
+
         self.autoencoder.fit(self.features, self.features,
                              shuffle=False,
                              epochs=epochs,
@@ -94,7 +130,8 @@ class KR_LSMTEncoder:
                              validation_data=(self.features, self.features))
 
     def reduce(self):
-        return self.encoder.predict(self.features)
+        return self.encoder.predict(self.to_predict, batch_size=1)
+        # return self.encoder.predict(self.features)
 
 
 # autoencode https://blog.keras.io/building-autoencoders-in-keras.html
