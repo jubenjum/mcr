@@ -13,7 +13,9 @@ from contextlib import contextmanager
 from itertools import product, tee
 from math import ceil, log
 from functools import partial
-from itertools import cycle
+
+from itertools import product
+from itertools import repeat, chain, izip_longest, cycle
 
 from joblib import Memory
 import numpy as np
@@ -21,7 +23,6 @@ import numpy as np
 import scipy.io.wavfile
 import toml
 import sklearn.metrics
-
 
 # for my_LinearDiscriminantAnalysis
 import warnings
@@ -35,6 +36,14 @@ from keras.layers import Input, Dense, Masking, BatchNormalization
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
+
+# from https://docs.python.org/2/library/itertools.html#itertools.tee
+def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx
+    args = [iter(iterable)] * n
+    return izip_longest(fillvalue=fillvalue, *args)
+
 
 # Module initialization
 np.random.seed(42)
@@ -62,7 +71,8 @@ memory = build_cache()
 def normalize(features):
     ''' Normalize features in the range (0,1) '''
     x = np.ma.array(features, mask=np.isnan(features))
-    x_ = (x - x.min()) / (x.max() - x.min()) + np.finfo(float).eps
+    x_ = (x - x.mean(axis=0)) / x.std(axis=0)
+    # x_ = (x - x.min()) / (x.max() - x.min()) + np.finfo(float).eps
     x_norm = x_.data
     x_norm[x.mask] = 0.0
     return x_norm
@@ -77,61 +87,55 @@ class KR_LSMTEncoder:
         self.labels = labels
 
         # normalize and set nan as a mask
-        features = normalize(features)
-        # features = normalize(features)
-        # features[np.isnan(features)] = 0.0
+        self.features = normalize(features)
+        self.features = np.array([x.reshape(len(x)//self.input_dim,
+                                            self.input_dim)
+                                  for x in self.features])
 
-        # make a reproducible shuffle of data, the cache will be the same
+        # mixing the order of the features ...
         random.seed(42)
         shuffled_range = range(self.num_feat)
         random.shuffle(shuffled_range)
-        self.features_ = features[shuffled_range]
-        self.to_predict = features[:]
+        self.features_ = self.features[shuffled_range]
 
-        # # rebuild features without void values and with new dimensions
-        # self.features = np.array([x[~np.isnan(x)] for x in self.features_])
-        # self.features = np.array([x.reshape(1, len(x)//input_dim, input_dim)
-        #                           for x in self.features])
+        # split: train (70%), validation(15%) and test (15%)
+        p70 = int(len(self.features)*0.70)
+        p85 = int(len(self.features)*0.85)
+        self.training_data = self.features_[:p70, :, :]
+        self.validation_data = self.features_[p70:p85, :, :]
+        self.test_data = self.features_[p85:, :, :]
 
-        self.features = np.array([x.reshape(len(x)//input_dim, input_dim)
-                                    for x in self.features_])
+        self.val_generator = self._generator(self.validation_data, 20)
+        self.trn_generator = self._generator(self.training_data, 40)
 
-    def _generate(self):
-        for x in cycle(self.features):
-            yield (x, x)
+    def _generator(self, data, n_batches=10):
+        for x in grouper(cycle(data), n_batches):
+            yield np.array(x), np.array(x)
 
-    def fit(self, n_dimensions):
-
+    def get_model(self, n_dimensions=20):
         inputs = Input(shape=(self.timesteps, self.input_dim))
         mask = Masking(mask_value=0.0)(inputs)
-        #inputs = Input(shape=(None, self.input_dim))
         encoded = LSTM(n_dimensions, return_sequences=False)(mask)
-
         decoded = RepeatVector(self.timesteps)(encoded)
         decoded = LSTM(self.input_dim, return_sequences=True)(decoded)
 
         self.autoencoder = Model(inputs, decoded)
         self.encoder = Model(inputs, encoded)
 
-        epochs = 1000
-        stop_callback = [EarlyStopping(monitor='val_loss', patience=epochs//10,
-                                       verbose=0), ]
-        self.autoencoder.compile(optimizer='adadelta', loss='mse')
+    def fit(self, n_dimensions):
+        self.get_model(n_dimensions)
+        self.autoencoder.compile(optimizer='rmsprop', loss='mse', metrics=['acc'])
 
-        # self.autoencoder.fit_generator(self._generate(),
-        #                                steps_per_epoch=100,
-        #                                epochs=epochs,
-        #                                shuffle=False)
+        self.history = self.autoencoder.fit_generator(
+            self.trn_generator, steps_per_epoch=40, epochs=100,
+            validation_data=self.val_generator, validation_steps=20)
 
-        self.autoencoder.fit(self.features, self.features,
-                             shuffle=False,
-                             epochs=epochs,
-                             callbacks=stop_callback,
-                             validation_data=(self.features, self.features))
+        # self.history = self.autoencoder.fit(self.training_data, self.training_data,
+        #                          epochs=20, batch_size=100,
+        #                          validation_data=(self.validation_data, self.validation_data))
 
     def reduce(self):
-        return self.encoder.predict(self.to_predict, batch_size=1)
-        # return self.encoder.predict(self.features)
+        return self.encoder.predict(self.features)
 
 
 # autoencode https://blog.keras.io/building-autoencoders-in-keras.html
@@ -165,8 +169,8 @@ class KR_AutoEncoder:
         self.encoder = Model(input_call, encoded)
 
         epochs = 1000
-        self.autoencoder.compile(optimizer='adadelta', loss='mse')
-        # self.autoencoder.compile(optimizer='rmsprop', loss='mse')
+        #self.autoencoder.compile(optimizer='adadelta', loss='mse')
+        self.autoencoder.compile(optimizer='rmsprop', loss='mse')
 
         stop_callback = [EarlyStopping(monitor='val_loss',
                                        patience=epochs//10, verbose=0), ]
@@ -295,7 +299,7 @@ def wavread(filename):
     fs : int
         samplerate
     """
-    fs, sig = scipy.io.wavfile.read(filename)
+    fs, sig = scipy.io.wavfile.read(os.path.expanduser(filename))
     return sig, fs
 
 
