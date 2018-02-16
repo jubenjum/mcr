@@ -7,15 +7,14 @@ import random
 import string
 import sys
 import os.path
+import os
 
 from time import time
 from contextlib import contextmanager
 from itertools import product, tee
+from itertools import izip_longest, cycle
 from math import ceil, log
 from functools import partial
-
-from itertools import product
-from itertools import repeat, chain, izip_longest, cycle
 
 from joblib import Memory
 import numpy as np
@@ -31,11 +30,17 @@ from sklearn.utils import check_X_y
 from sklearn.utils.multiclass import unique_labels
 
 # for AutoEncoder and LSTM
+stderr = sys.stderr  # avoid kears messages
+sys.stderr = open(os.devnull, 'w')
+
 from keras import regularizers
-from keras.layers import Input, Dense, Masking, BatchNormalization
+from keras.layers import Input, Dense, Masking
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
+from keras import losses
+sys.stderr = stderr
+
 
 # from https://docs.python.org/2/library/itertools.html#itertools.tee
 def grouper(iterable, n, fillvalue=None):
@@ -98,24 +103,23 @@ class KR_LSMTEncoder:
         random.shuffle(shuffled_range)
         self.features_ = self.features[shuffled_range]
 
-        # split: train (70%), validation(15%) and test (15%)
-        p70 = int(len(self.features)*0.70)
+        # split: train (85%), validation(15%) and test (0%)
         p85 = int(len(self.features)*0.85)
-        self.training_data = self.features_[:p70, :, :]
-        self.validation_data = self.features_[p70:p85, :, :]
-        self.test_data = self.features_[p85:, :, :]
+        self.training_data = self.features_
+        #self.training_data = self.features_[:p85, :, :]
+        #self.validation_data = self.features_[p85:, :, :]
 
-        self.val_generator = self._generator(self.validation_data, 20)
         self.trn_generator = self._generator(self.training_data, 40)
+        #self.val_generator = self._generator(self.validation_data, 40)
 
-    def _generator(self, data, n_batches=10):
+    def _generator(self, data, n_batches=40):
         for x in grouper(cycle(data), n_batches):
             yield np.array(x), np.array(x)
 
-    def get_model(self, n_dimensions=20):
+    def get_model(self, n_dimensions=40):
         inputs = Input(shape=(self.timesteps, self.input_dim))
         mask = Masking(mask_value=0.0)(inputs)
-        encoded = LSTM(n_dimensions, return_sequences=False)(mask)
+        encoded = LSTM(n_dimensions, dropout=0.2, return_sequences=False)(mask)
         decoded = RepeatVector(self.timesteps)(encoded)
         decoded = LSTM(self.input_dim, return_sequences=True)(decoded)
 
@@ -124,15 +128,22 @@ class KR_LSMTEncoder:
 
     def fit(self, n_dimensions):
         self.get_model(n_dimensions)
-        self.autoencoder.compile(optimizer='rmsprop', loss='mse', metrics=['acc'])
+        self.autoencoder.compile(optimizer='rmsprop',
+                                 # loss=losses.cosine_proximity,
+                                 loss='mse',
+                                 metrics=['acc'])
 
-        self.history = self.autoencoder.fit_generator(
-            self.trn_generator, steps_per_epoch=40, epochs=100,
-            validation_data=self.val_generator, validation_steps=20)
+        #self.history = self.autoencoder.fit_generator(
+        #    self.trn_generator, steps_per_epoch=1000, epochs=1000,
+        #    validation_data=self.val_generator, validation_steps=40)
 
-        # self.history = self.autoencoder.fit(self.training_data, self.training_data,
-        #                          epochs=20, batch_size=100,
-        #                          validation_data=(self.validation_data, self.validation_data))
+        self.history = self.autoencoder.fit(self.training_data,
+                                            self.training_data, epochs=1000)
+
+        self.history_dict = self.history.history
+        loss_values = self.history_dict['loss']
+        acc_values = self.history_dict['acc']
+
 
     def reduce(self):
         return self.encoder.predict(self.features)
