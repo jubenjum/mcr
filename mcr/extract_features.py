@@ -12,6 +12,7 @@ import numpy as np
 from mcr.util import load_config
 import mcr.load_segmented
 from mcr.util import build_cache
+from mcr.util import normalize 
 
 memory = build_cache()
 
@@ -113,10 +114,14 @@ def main():
 
     parser.add_argument('-o', '--out_csv', help='output features and labels in csv format')
 
+    parser.add_argument('-n', '--normalize', action='store_true', default=False, required=False, 
+                        help='normalize and fill with zeros the features that are variable size')
+
     args = parser.parse_args()
 
     annotation_file = args.annotations_file
     config_file = args.config_file
+    normalization = args.normalize
 
     # CONFIGURATION
     config = load_config(config_file)
@@ -128,6 +133,9 @@ def main():
     read_labels = df['label'].values
     features, labels = get_features(features_params, call_intervals,
                                     read_labels)
+
+    if normalization:
+        features = normalize(pd.DataFrame(features).values)
 
     # write the csv file
     with open(args.out_csv, 'w') as emb_csv:

@@ -18,6 +18,7 @@ from functools import partial
 
 from joblib import Memory
 import numpy as np
+import h5py
 
 import scipy.io.wavfile
 import toml
@@ -38,6 +39,8 @@ from keras.layers import Input, Dense, Masking
 from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
+from keras.models import load_model
+
 from keras import losses
 sys.stderr = stderr
 
@@ -77,8 +80,13 @@ def normalize(features):
     ''' Normalize features in the range (0,1) '''
     x = np.ma.array(features, mask=np.isnan(features))
     x_ = (x - x.mean(axis=0)) / x.std(axis=0)
+
+    # other options that didn't give good results:
     # x_ = (x - x.min()) / (x.max() - x.min()) + np.finfo(float).eps
+    # x_ = (x - x.min()) / (x.max() - x.min())
+    
     x_norm = x_.data
+    x_norm[x_norm == 0.0] += np.finfo(float).eps
     x_norm[x.mask] = 0.0
     return x_norm
 
@@ -102,15 +110,14 @@ class KR_LSMTEncoder:
         shuffled_range = range(self.num_feat)
         random.shuffle(shuffled_range)
         self.features_ = self.features[shuffled_range]
+        self.training_data = self.features_
 
         # split: train (85%), validation(15%) and test (0%)
-        p85 = int(len(self.features)*0.85)
-        self.training_data = self.features_
-        #self.training_data = self.features_[:p85, :, :]
-        #self.validation_data = self.features_[p85:, :, :]
-
-        self.trn_generator = self._generator(self.training_data, 40)
-        #self.val_generator = self._generator(self.validation_data, 40)
+        # p85 = int(len(self.features)*0.85)
+        # self.training_data = self.features_[:p85, :, :]
+        # self.validation_data = self.features_[p85:, :, :]
+        # self.trn_generator = self._generator(self.training_data, 40)
+        # self.val_generator = self._generator(self.validation_data, 40)
 
     def _generator(self, data, n_batches=40):
         for x in grouper(cycle(data), n_batches):
@@ -119,17 +126,35 @@ class KR_LSMTEncoder:
     def get_model(self, n_dimensions=40):
         inputs = Input(shape=(self.timesteps, self.input_dim))
         mask = Masking(mask_value=0.0)(inputs)
-        encoded = LSTM(n_dimensions, dropout=0.2, return_sequences=False)(mask)
+        encoded = LSTM(n_dimensions, return_sequences=False)(mask)
         decoded = RepeatVector(self.timesteps)(encoded)
         decoded = LSTM(self.input_dim, return_sequences=True)(decoded)
 
         self.autoencoder = Model(inputs, decoded)
         self.encoder = Model(inputs, encoded)
 
+    def save_data(self, filename):
+        """save the features and labels in a hdf5"""
+        with h5py.File (filename) as f:
+            f['features'] = self.features
+            f['labels'] = self.labels
+
+    def save_encoder(self, file_name):
+        """ save the encoder LSTM in h5 format using keras save function, to
+        get the model back use
+
+        >> model = load_model('my_model.h5')
+
+        """
+        self.encoder.save("{}".format(file_name))
+
+    def load_encoder(self, file_name):
+        """ Get the autoencoder saved with save_encoder """
+        self.encoder = load_model(file_name)
+
     def fit(self, n_dimensions):
         self.get_model(n_dimensions)
         self.autoencoder.compile(optimizer='rmsprop',
-                                 # loss=losses.cosine_proximity,
                                  loss='mse',
                                  metrics=['acc'])
 
@@ -138,15 +163,18 @@ class KR_LSMTEncoder:
         #    validation_data=self.val_generator, validation_steps=40)
 
         self.history = self.autoencoder.fit(self.training_data,
-                                            self.training_data, epochs=1000)
+                                            self.training_data, epochs=100)
 
         self.history_dict = self.history.history
         loss_values = self.history_dict['loss']
         acc_values = self.history_dict['acc']
 
 
-    def reduce(self):
-        return self.encoder.predict(self.features)
+    def reduce(self, *new_features):
+        if new_features:
+            return self.encoder.predict(new_features[0])
+        else:
+            return self.encoder.predict(self.features)
 
 
 # autoencode https://blog.keras.io/building-autoencoders-in-keras.html

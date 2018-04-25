@@ -107,6 +107,7 @@ def dimension_reduction(features, labels, red_method, new_dimension,
     elif red_method == 'LSTM' and is_matrix:
         kr_lstm = KR_LSMTEncoder(X_feat, labels, input_dim)
         kr_lstm.fit(n_dimensions=new_dimension)
+        #kr_lstm.save_data('spectral_features_variable_window.hdf5')
         shrinked_features = kr_lstm.reduce()
 
     elif red_method == 'AE' and is_matrix:
