@@ -18,6 +18,7 @@ from sklearn.decomposition import TruncatedSVD
 from mcr.util import load_config
 from mcr.util import KR_AutoEncoder
 from mcr.util import KR_LSMTEncoder
+from mcr.util import KR_TripletLoss
 from mcr.util import my_LinearDiscriminantAnalysis
 from mcr.util import build_cache
 
@@ -32,7 +33,7 @@ memory = build_cache()
 
 __all__ = ['dimension_reduction']
 
-REDUCTION_METHODS = ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM']
+REDUCTION_METHODS = ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM', 'TRIPLETLOSS']
 MATRIX_METHODS = ['PCA', 'LDA', 'TSNE']
 
 
@@ -115,6 +116,11 @@ def dimension_reduction(features, labels, red_method, new_dimension,
         kr_ae.fit(n_dimensions=new_dimension)
         shrinked_features = kr_ae.reduce()
 
+    elif red_method == 'TRIPLET_LOSS' and is_matrix:
+        kr_tl = KR_TripletLoss(X_feat, labels)
+        kr_tl.fit(n_dimensions=new_dimension)
+        shrinked_features = kr_tl.reduce()
+    
     else:  # default = raw
         shrinked_features = X_feat
 

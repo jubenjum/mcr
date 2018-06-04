@@ -1,3 +1,5 @@
+#
+
 """
 util: miscellaneous helper functions
 """
@@ -8,6 +10,8 @@ import string
 import sys
 import os.path
 import os
+from collections import defaultdict 
+
 
 from time import time
 from contextlib import contextmanager
@@ -29,6 +33,7 @@ import warnings
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.utils import check_X_y
 from sklearn.utils.multiclass import unique_labels
+from sklearn.preprocessing import LabelEncoder
 
 # for AutoEncoder and LSTM
 stderr = sys.stderr  # avoid kears messages
@@ -40,6 +45,7 @@ from keras.layers import LSTM, RepeatVector
 from keras.models import Model
 from keras.callbacks import EarlyStopping
 from keras.models import load_model
+from keras import backend as K
 
 from keras import losses
 sys.stderr = stderr
@@ -111,6 +117,8 @@ class KR_LSMTEncoder:
         random.shuffle(shuffled_range)
         self.features_ = self.features[shuffled_range]
         self.training_data = self.features_
+        labels_ = labels[shuffled_range]
+        self.training_labels = LabelEncoder().fit(labels_).transform(labels_)
 
         # split: train (85%), validation(15%) and test (0%)
         # p85 = int(len(self.features)*0.85)
@@ -177,7 +185,118 @@ class KR_LSMTEncoder:
             return self.encoder.predict(self.features)
 
 
-# autoencode https://blog.keras.io/building-autoencoders-in-keras.html
+
+def get_triples_indices(grouped, n):
+    '''balanced triplets'''
+    num_classes = len(grouped) 
+    #print("\nnum_classes={} ... n={}\n".format(num_classes, n))
+    positive_labels = np.random.randint(0, num_classes, size=n)
+    negative_labels = (np.random.randint(1, num_classes, size=n) + positive_labels) % num_classes
+    triples_indices = []
+    for positive_label, negative_label in zip(positive_labels, negative_labels):
+        negative = np.random.choice(grouped[negative_label])
+        positive_group = grouped[positive_label]
+        m = len(positive_group)
+        anchor_j = np.random.randint(0, m)
+        anchor = positive_group[anchor_j]
+        #print("....m={} ...anchor_j={}".format(m, anchor_j))
+        positive_j = 0 if m==1 else (np.random.randint(1, m) + anchor_j) % m
+        #print("{}".format(positive_j))
+        positive = positive_group[positive_j]
+	triples_indices.append([anchor, positive, negative])
+    
+    return np.asarray(triples_indices)
+
+
+def get_triples_data(x, grouped, n):
+    indices = get_triples_indices(grouped, n)
+    return x[indices[:,0]], x[indices[:,1]], x[indices[:,2]]
+
+
+def triplet_loss(inputs, dist='sqeuclidean', margin='maxplus'):
+    anchor, positive, negative = inputs
+    positive_distance = K.square(anchor - positive)
+    negative_distance = K.square(anchor - negative)
+    
+    if dist == 'euclidean':
+        positive_distance = K.sqrt(K.sum(positive_distance, axis=-1, keepdims=True))
+        negative_distance = K.sqrt(K.sum(negative_distance, axis=-1, keepdims=True))
+    elif dist == 'sqeuclidean':
+        positive_distance = K.mean(positive_distance, axis=-1, keepdims=True)
+        negative_distance = K.mean(negative_distance, axis=-1, keepdims=True)
+        
+    loss = positive_distance - negative_distance
+    
+    if margin == 'maxplus':
+        loss = K.maximum(0.0, 1 + loss)
+    elif margin == 'softplus':
+        loss = K.log(1 + K.exp(loss))
+        
+    return K.mean(loss)
+
+
+def triplet_generator(x, y, batch_size):
+    grouped = defaultdict(list)
+    for i, label in enumerate(y):
+        grouped[label].append(i)
+        
+    while True:
+        x_anchor, x_positive, x_negative = get_triples_data(x, grouped, batch_size)
+        yield ({'anchor_input': x_anchor,
+               'positive_input': x_positive,
+               'negative_input': x_negative},
+               None)
+
+
+class KR_TripletLoss(KR_LSMTEncoder):
+    
+    def __init__(self, features, labels, input_dim=20):
+        KR_LSMTEncoder.__init__(self, features, labels, input_dim)
+
+    def get_model(self, n_dimensions=20):
+        self.input_shape = (self.timesteps, self.input_dim)
+        base_input = Input(shape=self.input_shape)
+        x = Masking(mask_value=0.0)(base_input)
+        x = LSTM(n_dimensions, return_sequences=False)(x)
+        # x = Dense(2, activation='linear')(x)
+        embedding_model = Model(base_input, x, name='embedding')
+        
+        anchor_input = Input(self.input_shape, name='anchor_input')
+        positive_input = Input(self.input_shape, name='positive_input')
+        negative_input = Input(self.input_shape, name='negative_input')
+        
+        anchor_embedding = embedding_model(anchor_input)
+        positive_embedding = embedding_model(positive_input)
+        negative_embedding = embedding_model(negative_input)
+        
+        inputs = [anchor_input, positive_input, negative_input]
+        outputs = [anchor_embedding, positive_embedding, negative_embedding]
+        triplet_model = Model(inputs, outputs)
+        triplet_model.add_loss(K.mean(triplet_loss(outputs)))
+        triplet_model.compile(loss=None, optimizer='rmsprop')
+
+        return embedding_model, triplet_model
+
+    def fit(self, n_dimensions):
+	batch_size = 100
+	steps_per_epoch = 32
+	epochs = 500
+        self.embedding_model, self.triplet_model = self.get_model(n_dimensions)
+        self.triplet_model.fit_generator(
+              triplet_generator(self.training_data, self.training_labels, batch_size),
+              steps_per_epoch=steps_per_epoch, epochs=epochs, verbose=1)
+
+    def reduce(self, *new_features):
+	get_layer = K.function([self.embedding_model.layers[0].input], 
+                               [self.embedding_model.layers[2].output])
+        if new_features:
+            return get_layer([new_features[0]])[0]
+        else:
+            return get_layer([self.features])[0]
+
+
+
+## autoencoder https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_AutoEncoder:
     def __init__(self, features, labels):
         # self.features = normalize(features)

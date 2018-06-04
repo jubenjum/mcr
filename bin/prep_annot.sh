@@ -2,7 +2,7 @@
 
 set -e
 
-DATA_DIR="$1"
+INPUT_DIR="$1"
 OUTPUT_DIR="$2"
 
 # equivalent to $(readlink -f $1) in pure bash (compatible with macos)
@@ -19,10 +19,13 @@ function failure { [ ! -z "$1" ] && echo "Error: $1"; exit 1; }
 
 
 # check if variables
-[ ! -z "$DATA_DIR" ] || failure "DATA_DIR command line argument not set" 
+[ ! -z "$INPUT_DIR" ] || failure "INPUT_DIR command line argument not set" 
 [ ! -z "$OUTPUT_DIR" ] || failure "OUTPUT_DIR command line argument not set" 
 
-cd "$DATA_DIR"
+INPUT_DIR=$(realpath $INPUT_DIR)
+OUTPUT_DIR=$(realpath $OUTPUT_DIR)
+
+cd "$INPUT_DIR"
 
 ## prepere output files 
 all_ann="$OUTPUT_DIR"/annotations.csv
@@ -33,7 +36,7 @@ rm -rf $train_ann $test_ann xaa xab
 # create a randomized and reproducible annotation file
 # FIX: lt is not reproducible
 RANDOM=1
-for tg_file in "$DATA_DIR"/*.TextGrid; do
+for tg_file in "$INPUT_DIR"/*.TextGrid; do
     #echo "$tg_file" >&2 
     text_name=$(basename "$tg_file" .TextGrid) # only the file name no directory
     #ext_wav_file="${wav_name##*.}"
@@ -47,7 +50,7 @@ for tg_file in "$DATA_DIR"/*.TextGrid; do
         #sed "s#$curr_dir#$OUTPUT_DIR/wav#g" 
 done > "$all_ann"
 
-sed -i "s#$DATA_DIR#$OUTPUT_DIR/wav/#g" "$all_ann" 
+sed -i "s#$INPUT_DIR#$OUTPUT_DIR/wav/#g" "$all_ann" 
 
 
 # split will generate two files xaa with 80% of all data
