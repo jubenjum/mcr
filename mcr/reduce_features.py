@@ -18,6 +18,7 @@ from sklearn.decomposition import TruncatedSVD
 from mcr.util import load_config
 from mcr.util import KR_AutoEncoder
 from mcr.util import KR_LSMTEncoder
+from mcr.util import KR_LSTMEmbeddings
 from mcr.util import KR_TripletLoss
 from mcr.util import my_LinearDiscriminantAnalysis
 from mcr.util import build_cache
@@ -33,15 +34,15 @@ memory = build_cache()
 
 __all__ = ['dimension_reduction']
 
-REDUCTION_METHODS = ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM', 'TRIPLETLOSS']
+REDUCTION_METHODS = ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM', 'LSTMEMBED', 'TRIPLETLOSS']
 MATRIX_METHODS = ['PCA', 'LDA', 'TSNE']
 
 
 @memory.cache
 def dimension_reduction(features, labels, red_method, new_dimension,
                         standard_scaler=False, config=None):
-    ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA dimension
-    reduction methods
+    ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA, LSTM, 
+    LSTMEMBED, and TRIPLETLOSS embeddings dimension reduction methods
 
     The input features will be reduced with one of these methods (or raw
     output), it can be removed the std from the features using the std.
@@ -52,7 +53,8 @@ def dimension_reduction(features, labels, red_method, new_dimension,
               (list[numpy.ndarray])
     labels: values of the same size of features (list)
     red_method: the reduction method, valid methods are:
-                'PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSH' (str)
+                'PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSH', 
+                'LSTM', 'LSTMEMBED', and 'TRIPLETLOSS' (str)
     new_dimension: new dimension [int]
     standard_scaler: scale all features [bool]
 
@@ -110,13 +112,18 @@ def dimension_reduction(features, labels, red_method, new_dimension,
         kr_lstm.fit(n_dimensions=new_dimension)
         #kr_lstm.save_data('spectral_features_variable_window.hdf5')
         shrinked_features = kr_lstm.reduce()
+    
+    elif red_method == 'LSTMEMBED' and is_matrix:
+        kr_lstmemb = KR_LSTMEmbeddings(X_feat, labels)
+        kr_lstmemb.fit(n_dimensions=new_dimension)
+        shrinked_features = kr_lstmemb.reduce()
 
     elif red_method == 'AE' and is_matrix:
         kr_ae = KR_AutoEncoder(X_feat, labels)
         kr_ae.fit(n_dimensions=new_dimension)
         shrinked_features = kr_ae.reduce()
 
-    elif red_method == 'TRIPLET_LOSS' and is_matrix:
+    elif red_method == 'TRIPLETLOSS' and is_matrix:
         kr_tl = KR_TripletLoss(X_feat, labels)
         kr_tl.fit(n_dimensions=new_dimension)
         shrinked_features = kr_tl.reduce()

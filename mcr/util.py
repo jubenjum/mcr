@@ -280,7 +280,7 @@ class KR_TripletLoss(KR_LSMTEncoder):
     def fit(self, n_dimensions):
 	batch_size = 100
 	steps_per_epoch = 32
-	epochs = 500
+	epochs = 2000
         self.embedding_model, self.triplet_model = self.get_model(n_dimensions)
         self.triplet_model.fit_generator(
               triplet_generator(self.training_data, self.training_labels, batch_size),
@@ -289,6 +289,48 @@ class KR_TripletLoss(KR_LSMTEncoder):
     def reduce(self, *new_features):
 	get_layer = K.function([self.embedding_model.layers[0].input], 
                                [self.embedding_model.layers[2].output])
+        if new_features:
+            return get_layer([new_features[0]])[0]
+        else:
+            return get_layer([self.features])[0]
+
+
+
+class KR_LSTMEmbeddings(KR_LSMTEncoder):
+    
+    def __init__(self, features, labels, input_dim=20):
+        KR_LSMTEncoder.__init__(self, features, labels, input_dim)
+
+
+    def get_model(self, n_dimensions=20):
+	
+	self.encoder_layer = 2
+        self.input_shape = (self.timesteps, self.input_dim)
+        
+	inputs = Input(shape=self.input_shape)
+        x = Masking(mask_value=0.0, name='mask')(inputs)
+        x = LSTM(n_dimensions, return_sequences=False, name="encoder")(x)
+        x = Dense(1, activation='linear')(x)
+        embedding_model = Model(inputs, x, name='embedding')
+        
+	return embedding_model
+
+
+    def fit(self, n_dimensions):
+	n_epochs = 400
+
+        self.embedding_model = self.get_model(n_dimensions)
+        
+        self.embedding_model.compile(optimizer='rmsprop', loss='mse', 
+                                     metrics=['acc', 'cosine_proximity'])
+
+	self.embedding_model.fit(self.training_data, self.training_labels, 
+                              shuffle=False, verbose=1, epochs=n_epochs,
+                              batch_size=100)
+
+
+    def reduce(self, *new_features):
+	get_layer = K.function([self.embedding_model.layers[0].input], [self.embedding_model.layers[2].output])
         if new_features:
             return get_layer([new_features[0]])[0]
         else:
