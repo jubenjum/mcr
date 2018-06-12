@@ -280,7 +280,7 @@ class KR_TripletLoss(KR_LSMTEncoder):
     def fit(self, n_dimensions):
 	batch_size = 100
 	steps_per_epoch = 32
-	epochs = 2000
+	epochs = 200
         self.embedding_model, self.triplet_model = self.get_model(n_dimensions)
         self.triplet_model.fit_generator(
               triplet_generator(self.training_data, self.training_labels, batch_size),
