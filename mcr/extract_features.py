@@ -5,6 +5,8 @@ extract_features: prepare the csv file with features and labels used to build AB
 """
 
 import sys
+from collections import Counter
+
 
 import pandas as pd
 import numpy as np
@@ -111,8 +113,16 @@ def main():
     parser.add_argument('annotations_file', help='file with the stimuli source: wav_file, interval, label ')
 
     parser.add_argument('config_file', help='algorithm configuration file for the feature extration')
+    
+    parser.add_argument('-s', '--switch_features', required=False,                   
+                        help=('Allow to replace the default features extracted with ' 
+                              'parameters on `config_file` for a hard-coded features.\n'
+                              'The format of the file is csv with fields separated by ","\n'
+                              'and file should contain: filename,start,end,label,new_features\n', 
+                              'NOTE: csv without header'))    
 
-    parser.add_argument('-o', '--out_csv', help='output features and labels in csv format')
+    parser.add_argument('-o', '--out_csv', default='features',
+            help='output features and labels in csv format')
 
     parser.add_argument('-n', '--normalize', action='store_true', default=False, required=False, 
                         help='normalize and fill with zeros the features that are variable size')
@@ -121,6 +131,7 @@ def main():
 
     annotation_file = args.annotations_file
     config_file = args.config_file
+    switch_file = args.switch_features
     normalization = args.normalize
 
     # CONFIGURATION
@@ -137,10 +148,36 @@ def main():
     if normalization:
         features = normalize(pd.DataFrame(features).values)
 
+    # read the new features, I am reading line by line because the number of 
+    # features can be different from row to row
+    new_features = {}
+    if switch_file:
+        with open(switch_file, 'r') as sfile:
+            for line in sfile.readlines():
+                line = line.strip().split(',')
+                newfile = line[0]
+                start = float(line[1])
+                end = float(line[2])
+                label = line[3]
+                try:
+                     idx = df.query(('(filename == @newfile) and ' 
+                         '(label == @label) and' 
+                         '(@end >= start and @start <= end)')).index[0]
+                except IndexError:
+                    print('new feature not found: {} {} {} {}'.format(newfile, start, end, label))
+                    sys.exit()
+                new_features[idx] = line[4:]
+
+
     # write the csv file
     with open(args.out_csv, 'w') as emb_csv:
-        for label, feats in zip(labels, features):
-            t = '{},'.format(label) + ','.join(['{}'.format(x) for x in feats]) + '\n'
+        for idx, (label, feats) in enumerate(zip(labels, features)):
+            try:
+                feats_ = new_features[idx]
+            except KeyError:
+                feats_ = feats
+                
+            t = '{},'.format(label) + ','.join(['{}'.format(x) for x in feats_]) + '\n'
             emb_csv.write(t)
 
 
