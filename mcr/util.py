@@ -1,5 +1,3 @@
-#
-
 """
 util: miscellaneous helper functions
 """
@@ -35,7 +33,7 @@ from sklearn.utils import check_X_y
 from sklearn.utils.multiclass import unique_labels
 from sklearn.preprocessing import LabelEncoder
 
-# for AutoEncoder and LSTM
+# for AutoEncoder and LSTM generates error messages
 stderr = sys.stderr  # avoid kears messages
 sys.stderr = open(os.devnull, 'w')
 
@@ -46,7 +44,6 @@ from keras.models import Model
 from keras.callbacks import EarlyStopping
 from keras.models import load_model
 from keras import backend as K
-
 from keras import losses
 sys.stderr = stderr
 

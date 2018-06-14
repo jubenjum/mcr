@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: latin-1 -*-
+
 
 """
 Routines to parse Praat TextGrid files, the decoded files will be

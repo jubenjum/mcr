@@ -23,7 +23,28 @@ from util import wavread
 
 ## helper functions for the FeatureLoader class
 def load_wav(fname, fs=16000):
-    """ audio loader """
+    """ load_wav function test and read a wav files, and convert
+    stereo channels into mono 
+
+    Parameters
+    ----------
+    
+    fname : [string]
+        wav input file name
+
+    fs : [int, default=16000]
+        check if the sampling rate of the signal given by 
+        this variable, frequency in Hz
+
+
+    Returns
+    -------
+
+    sig : [np.array]
+        mono-channel signal 
+
+
+    """
 
     sig, found_fs = wavread(fname)
     if fs != found_fs:
@@ -40,6 +61,36 @@ def load_wav(fname, fs=16000):
 # this function goes with FeatureLoader but is defined outside it,
 # because I cannot get the parallellization to work on instance methods
 def extract_features_fix_stacksize(sig, noise, start, stacksize, encoder, buffer_length=0.1):
+    """ External method for FeatureLoader that extracts features for a fix size stack
+    
+    Parameters
+    ----------
+    sig : [np.array]
+        mono-channel signal
+
+    noise : [np.array]
+        a signal trace with the noise sample 
+
+    start : [float]
+        starting frame where it begins the selected features
+
+    stacksize : [float]
+        stack size, size of the extracted features
+
+    encoder : [dict]
+        encoder configuration read from the config file  
+
+    buffer_length : [float, default=0.1]
+
+
+    Returns
+    -------
+
+    feat : [np.array]
+        array of fix size with features. It will return a zero-padded features 
+        if the limits of the window are outside of signal.
+    
+    """
 
     # determine buffer and call start and end points in smp and fr
     buffer_len_smp = int(buffer_length * encoder.fs)
@@ -66,9 +117,36 @@ def extract_features_fix_stacksize(sig, noise, start, stacksize, encoder, buffer
     return feat
 
 
-#################################
-# extract features
 def extract_features(sig, noise, start, end, encoder, buffer_length=0.1):
+    """ extract features for a variable size stack window
+    
+    Parameters
+    ----------
+    sig : [np.array]
+        mono-channel signal
+
+    noise : [np.array]
+        a signal trace with the noise sample 
+
+    start : [float]
+        starting frame of the features in the sig-space 
+
+    end : [float]
+        ending frame
+
+    encoder : [dict]
+        encoder configuration read from the config file  
+
+    buffer_length : [float, default=0.1]
+
+
+    Returns
+    -------
+
+    feat : [np.array]
+        array of fix size with features. 
+    
+    """
 
     # determine buffer and call start and end points in smp and fr
     buffer_len_smp = int(buffer_length * encoder.fs)
@@ -94,7 +172,6 @@ def extract_features(sig, noise, start, end, encoder, buffer_length=0.1):
     return feat
 
 def extract_noise(sig, cfg, encoder):
-    
     if cfg['n_noise_fr'][0] == 0:
         noise = None
     else:
@@ -107,7 +184,31 @@ def extract_noise(sig, cfg, encoder):
 
 
 def encoder_func(cfg, encoder=Spectral):
-    '''wrap the encoder ...'''
+    """ encoder_func function encode the arguments and initialize the 
+    class (Spectral) with a generated arguments from the configuration
+    variable.
+
+    Spectral Class has many default variables, instead of setting all
+    the arguments by hand, here arguments are build dinamically and they
+    are passed to the encoder class.
+
+    Parameters
+    ----------
+
+    cfg : {dict}
+        dictionary generated when reading the configuration file
+
+    encoder : [class, default=Spectral]
+        class that will be unitialized with the configuration  
+
+    
+    Returns
+    -------
+
+    _encoder : [class, default=Spectral]
+        returns the encoder class initialized with arguments in cfg 
+
+    """
 
     # self.feat_param should have the right attributes
     # that will be used to create the encoder arguments
@@ -127,9 +228,6 @@ def encoder_func(cfg, encoder=Spectral):
 
     return _encoder 
 
-###########################
-
-
 
 class IdentityTransform(TransformerMixin, BaseEstimator):
     """Dummy Transformer that implements the identity transform
@@ -142,40 +240,44 @@ class IdentityTransform(TransformerMixin, BaseEstimator):
 
 
 class FeatureLoader(TransformerMixin, BaseEstimator):
-    ''' FeatureLoader '''
+    """ FeatrueLoader Class
+    
+    Extracts features from wav files
 
-    # TODO: encoder_vars should be build from a configuration file 
-    # encoder_vars are the variables that the class Spectral uses
+    """
+
     encoder_vars = ['fs', 'window_length', 'window_shift',
             'nfft', 'lowerf', 'upperf', 'nfilt',
             'taper_filt', 'dct', 'nceps',
             'log_e', 'lifter', 'deltas', 'remove_dc',
             'medfilt_t', 'medfilt_s', 'noise_fr', 'pre_emph']
 
-    feat_param = {'stacksize':40,
-                  'normalize':'mvn',
-                  'n_noise_fr':0,
-                  'fs':16000,
-                  'window_length':0.050,
-                  'window_shift':0.010,
-                  'nfft':1024,
-                  'scale':'mel',
-                  'lowerf':120,
-                  'upperf':7000,
-                  'nfilt':40,
-                  'taper_filt':True,
-                  'compression':'log',
-                  'dct':False,
-                  'nceps':13,
-                  'log_e':True,
-                  'lifter':22,
-                  'deltas':False,
-                  'remove_dc':False,
-                  'medfilt_t':0,
-                  'medfilt_s':(0, 0),
-                  'noise_fr':0,
-                  'pre_emph':0.97,
-                  'n_jobs':1, 'verbose':False}
+    # default parameters
+    feat_param = {'stacksize' : 40,
+                  'normalize' : 'mvn',
+                  'n_noise_fr' : 0,
+                  'fs' : 16000,
+                  'window_length' : 0.050,
+                  'window_shift' : 0.010,
+                  'nfft' : 1024,
+                  'scale' : 'mel',
+                  'lowerf' : 120,
+                  'upperf' : 7000,
+                  'nfilt' : 40,
+                  'taper_filt' : True,
+                  'compression' : 'log',
+                  'dct' : False,
+                  'nceps' : 13,
+                  'log_e' : True,
+                  'lifter' : 22,
+                  'deltas' : False,
+                  'remove_dc' : False,
+                  'medfilt_t' : 0,
+                  'medfilt_s' : (0, 0),
+                  'noise_fr' : 0,
+                  'pre_emph' : 0.97,
+                  'n_jobs' : 1, 
+                  'verbose' : False}
 
     CACHE = ['feat_cache', 'noise_cache', 'wav_cache'] 
 
@@ -242,7 +344,7 @@ class FeatureLoader(TransformerMixin, BaseEstimator):
         return p
 
     def get_key(self):
-        """'Frozen' dictionary representation of this object's parameters.
+        """'Frozen dictionary representation of this object's parameters.
         Used as key in caching.
         """
         p = self.get_params()

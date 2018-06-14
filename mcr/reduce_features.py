@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: latin-1 -*-
+
 
 """
 reduce_features: reduce features from the csv files.
@@ -41,32 +43,50 @@ MATRIX_METHODS = ['PCA', 'LDA', 'TSNE']
 @memory.cache
 def dimension_reduction(features, labels, red_method, new_dimension,
                         standard_scaler=False, config=None):
-    ''' dimesion_deduction is a wrap to PCA, LDA, TSNE, LSA, LSTM, 
-    LSTMEMBED, and TRIPLETLOSS embeddings dimension reduction methods
+    """dimesion_deduction is function that a wraps PCA, LDA, TSNE, LSA, LSTM, 
+    LSTMEMBED, and TRIPLETLOSS-embeddings dimension reduction methods
 
     The input features will be reduced with one of these methods (or raw
     output), it can be removed the std from the features using the std.
 
     Parameters
     ----------
-    features: list of numpy arrays with numeric floating point elements
-              (list[numpy.ndarray])
-    labels: values of the same size of features (list)
-    red_method: the reduction method, valid methods are:
-                'PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSH', 
-                'LSTM', 'LSTMEMBED', and 'TRIPLETLOSS' (str)
-    new_dimension: new dimension [int]
-    standard_scaler: scale all features [bool]
+
+    features : [list of np.ndarrays]
+        list of numpy arrays with numeric floating point elements
+    
+    labels : [list]
+        list with labels/annotations, same length that features list
+    
+    red_method : [String]
+        A string with the the reduction method that will be 
+        applied to the features/labels, valid methods are:
+        'PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSH', 
+        'LSTM', 'LSTMEMBED', and 'TRIPLETLOSS'
+
+        From these methods 'PCA', 'LDA', 'RAW', 'TSNE', and 'LSH' are for
+        fix length features and  'AE', 'LSTM', 'LSTMEMBED', and 
+        'TRIPLETLOSS' can be used with variable length features
+    
+    new_dimension : [Integer]
+        the new dimension of the features, it should be lower that
+        the original feature dimension
+    
+    standard_scaler :  [Bool]
+        Apply the standar scale to all features using scikit-learn StandardScaler
+        function
 
 
     Returns
     -------
-    shrinked_features: reduced dimension features with the same format that
-                       features (list[numpy.ndarray])
-    labels: list of label (numpy.ndarray)
+    shrinked_features : [list of np.ndarray] 
+        reduced dimension features with the same format that input features 
+        with features reduced to the new_dimension size
 
+    labels: [np.ndarray] 
+        list of label for the new reduced dimension features 
 
-    '''
+    """
 
     if red_method not in REDUCTION_METHODS:
         raise ValueError('red_method {} not supported'.format(red_method))
@@ -131,6 +151,7 @@ def dimension_reduction(features, labels, red_method, new_dimension,
     else:  # default = raw
         shrinked_features = X_feat
 
+    # I return a list of np.ndarrays, unfolding the list
     shrinked_features = [x for x in shrinked_features]
 
     return shrinked_features, labels
@@ -143,17 +164,23 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='prepare the csv or abx files to compute ABX score')
 
-    parser.add_argument('features_source', help='csv file contining hte features')
+    parser.add_argument('features_source', 
+            help='csv file contining hte features')
 
-    parser.add_argument('algorithm_config', help='algorithm configuration file for the feature extration')
+    parser.add_argument('algorithm_config', 
+            help='algorithm configuration file for the feature extration')
 
-    parser.add_argument('-o', '--out_csv', required=True, help='output features and labels in csv format')
+    parser.add_argument('-o', '--out_csv', required=True, 
+            help='output features and labels in csv format')
 
     parser.add_argument('--standard_scaler', action='store_true', default=False, required=False,
             help='scale the features')
 
-    parser.add_argument('-r', '--reduction', help=('use dimension reduction, '
-                                                   'valid methods are raw, pca,lda, tsne and ae [autoencoder]'))
+    parser.add_argument('-r', '--reduction', 
+            help=('use dimension reduction, ' 
+                  'valid methods are raw, pca,lda, lsa, tsne, ae [autoencoder], '
+                  'lstm, lstmembed and tripletloss, these two last methods '
+                  'gives embeddings'))
 
     args = parser.parse_args()
     data_file = args.features_source
@@ -165,6 +192,7 @@ def main():
     # CONFIGURATION
     config = load_config(config_file)
 
+    # check if the selected reduction dimension algorithm is supported
     if reduction_type:
         red_method = reduction_type
         red_method = red_method.upper()
@@ -174,18 +202,29 @@ def main():
             sys.exit()
 
         try:
-            new_dimension = config['dimension_reduction'][red_method]  # from the config file
+            # the config file should have also declared the selected algorithm 
+            new_dimension = config['dimension_reduction'][red_method]
         except:
             print('missing section dimension_reduction in config file [{}]'.format(red_method))
             sys.exit()
 
-    else:
+    else: # default method is None that will trigger the raw dimension reduction
        red_method = None
 
-    # FEATURES format:
-    # label,f1,f2..fNJ where J is the total number of labels N number of features
+    # Read features file, the format of the file is simple, it is a csv without
+    # header and with the folloging data-fields:
+    #
+    # label1,f11,f12,f13, .. f1J-1,f1J 
+    # ....
+    # labelN,fN1,fN2,fN3, .. fMJ-1,fMJ
+    #
+    # where N ar the samples/calls and J number of features,
+    # labels can be any type of printable objects (int, float, str)
+    # and features are floats
+    # 
 
-    # FIXME: what if the format changes?
+    # I read this csv by hand (not numpy or pandas) as it 
+    # can contain a variable number of features
     labels_from_csv = []
     features_from_csv = []
     with open(data_file, 'r') as dfile:
@@ -194,11 +233,12 @@ def main():
             labels_from_csv.append(row[0])  # label/call in the first column
             features_from_csv.append([float(x) for x in row[1:]])
 
-    # FEATURES feature reduction
+    # Apply feature reduction
     features, labels = dimension_reduction(features_from_csv, labels_from_csv,
                                            red_method, new_dimension,
                                            standard_scaler, config)
-
+    
+    # write out the reduced dimension into a new file
     with open(output_csv, 'w') as emb_csv:
         for label, feats in zip(labels, features):
             t = '{},'.format(label) + ','.join(['{}'.format(x)
