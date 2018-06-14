@@ -22,29 +22,32 @@ __all__ = ['get_features', 'save_features']
 
 
 def save_features(fname, features, labels, sep=','):
-    ''' save_features save the features and labels in a csv file.
+    ''' save_features save the features and labels in a csv file using
+    pandas to_csv function.
 
-    In the first column are stored the labels, and the rest of columns
+    First column will be stored the labels, and the rest of columns
     contains the features.
 
     Parameters
     ----------
-    fname : file, str
-        file name
+    
+    fname: [string]
+        output file name
 
-    features : list
-        features/embeddings that will be saved.
+    features : [list or np.array]
+        The list of features that will be saved, it can be a python list 
+        or np.array, the elements must be floating point values
 
-    labels : list
-        labels for the features
+    labels : [list or np.array]
+        labels is a python or numpy list with any printable object 
 
-    sep : str [default=',']
-        field separation
+    sep : [string, default=',']
+        csv field separation 
 
 
     Returns
     -------
-
+    
     A csv file with the name set by fname variable
 
     '''
@@ -63,16 +66,26 @@ def get_features(features_params, call_intervals, read_labels):
 
     Parameters
     ----------
-    features_params : parameters from the config file, loaded with mcr.util.load_config (dict)
-    call_intervals : arrays with structure = [wav_filename, start_time, end_time] (numpy.ndarray)
-    read_labels : labels for the call_intervals (numpy.ndarray)
+    
+    features_params : [dict]
+         parameters from the config file, loaded with mcr.util.load_config
+    
+    call_intervals : [np.ndarray]
+         arrays with structure = [wav_filename, start_time, end_time] 
+
+    read_labels : [list of Strings]
+         labels for the call_intervals, a python list with string elements
 
     Returns
     -------
-    features: features extracted from call_intervals files using parameters from
-              the features_params, a list of numpy arrays is returned as it can
-              fit different size features (list[numpy.ndarray])
-    labels: labels related to the features (numpy.ndarray)
+    
+    features : [list of np.ndarrays] 
+        features extracted from call_intervals files using parameters from
+        the features_params, a list of numpy arrays is returned as it can
+        fit different size features 
+              
+    labels : [np.darray] 
+        Features' labels  
 
     '''
 
@@ -82,21 +95,27 @@ def get_features(features_params, call_intervals, read_labels):
     # FEATURES
     features_ = []
 
-    # in the pipeline wav files are at 16000Hz mono
+    # in the pipeline I standarized the wav to be 16000Hz mono
     encoder = mcr.load_segmented.encoder_func(features_params) # use Spectral as default
     for fname, start, end in call_intervals:
         key = (fname, start)
         sig = mcr.load_segmented.load_wav(fname)
+
         noise = mcr.load_segmented.extract_noise(sig, features_params, encoder)
 
+        # select the the specific function to extract features: 
+        # one that deals only with fix size stack (develped by Maarten) and
+        # other that extracts features when the the stack size is not constant
         extract_func = mcr.load_segmented.extract_features_fix_stacksize \
                        if fix_stacksize else mcr.load_segmented.extract_features
 
         if fix_stacksize:
             feats = extract_func(sig, noise, start, fix_stacksize, encoder)
         else:
-            feats = extract_func(sig, noise, start, end, encoder)
-
+            try:
+                feats = extract_func(sig, noise, start, end, encoder)
+            except:
+                pass
 
         features_.append(feats.flatten())
 
