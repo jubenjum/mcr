@@ -96,7 +96,7 @@ def normalize(features):
 
 # LSTM Encoder https://blog.keras.io/building-autoencoders-in-keras.html
 class KR_LSMTEncoder:
-    def __init__(self, features, labels, input_dim=40):
+    def __init__(self, features, labels, input_dim):
         self.num_feat, self.feat_dim = features.shape
         self.timesteps = self.feat_dim // input_dim  # frames
         self.input_dim = input_dim  # size of the features/nfilt
@@ -128,7 +128,7 @@ class KR_LSMTEncoder:
         for x in grouper(cycle(data), n_batches):
             yield np.array(x), np.array(x)
 
-    def get_model(self, n_dimensions=40):
+    def get_model(self, n_dimensions):
         inputs = Input(shape=(self.timesteps, self.input_dim))
         mask = Masking(mask_value=0.0)(inputs)
         encoded = LSTM(n_dimensions, return_sequences=False)(mask)
@@ -168,7 +168,7 @@ class KR_LSMTEncoder:
         #    validation_data=self.val_generator, validation_steps=40)
 
         self.history = self.autoencoder.fit(self.training_data,
-                                            self.training_data, epochs=100)
+                                            self.training_data, epochs=1000)
 
         self.history_dict = self.history.history
         loss_values = self.history_dict['loss']
