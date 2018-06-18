@@ -22,7 +22,7 @@ from util import wavread
 
 
 ## helper functions for the FeatureLoader class
-def load_wav(fname, fs=16000):
+def load_wav(fname, fs):
     """ load_wav function test and read a wav files, and convert
     stereo channels into mono 
 
@@ -32,7 +32,7 @@ def load_wav(fname, fs=16000):
     fname : [string]
         wav input file name
 
-    fs : [int, default=16000]
+    fs : [int]
         check if the sampling rate of the signal given by 
         this variable, frequency in Hz
 

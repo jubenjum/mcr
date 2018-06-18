@@ -95,11 +95,11 @@ def get_features(features_params, call_intervals, read_labels):
     # FEATURES
     features_ = []
 
-    # in the pipeline I standarized the wav to be 16000Hz mono
+    # sampling rate can be variable, but mainly I used 16000Hz 
     encoder = mcr.load_segmented.encoder_func(features_params) # use Spectral as default
     for fname, start, end in call_intervals:
         key = (fname, start)
-        sig = mcr.load_segmented.load_wav(fname)
+        sig = mcr.load_segmented.load_wav(fname, encoder.fs)
 
         noise = mcr.load_segmented.extract_noise(sig, features_params, encoder)
 
@@ -125,6 +125,13 @@ def get_features(features_params, call_intervals, read_labels):
 def main():
     import argparse
 
+    help_switch = """Allow to replace the default features extracted with 
+    parameters on `config_file` for a hard-coded features.
+    The format of the file is csv with fields separated by ","
+    and file should contain: filename,start,end,label,new_features
+    NOTE: csv without header
+    """
+
     parser = argparse.ArgumentParser(prog=sys.argv[0],
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description='prepare the csv files to build abx files')
@@ -134,11 +141,7 @@ def main():
     parser.add_argument('config_file', help='algorithm configuration file for the feature extration')
     
     parser.add_argument('-s', '--switch_features', required=False,                   
-                        help=('Allow to replace the default features extracted with ' 
-                              'parameters on `config_file` for a hard-coded features.\n'
-                              'The format of the file is csv with fields separated by ","\n'
-                              'and file should contain: filename,start,end,label,new_features\n', 
-                              'NOTE: csv without header'))    
+                        help=help_switch)
 
     parser.add_argument('-o', '--out_csv', default='features',
             help='output features and labels in csv format')
