@@ -1,0 +1,48 @@
+{
+	"KR_LSMTEncoder": {
+    	    "compile" : {
+           	"optimizer":"rmsprop",
+        	"loss":"mse",
+        	"metrics":["acc"]
+	    },
+
+	    "fit" : {
+	    	"epochs": 1000,
+            "verbose":1
+	    },
+
+        "fit_generator": {
+            "steps_per_epoch": 1000,
+            "epochs": 1000,
+            "validation_steps":40
+        }
+    },
+
+
+    "KR_TripletLoss" : {
+        
+        "fit_generator": {
+            "batch_size": 100,
+            "steps_per_epoch": 32,
+            "epochs": 200,
+            "verbose":1
+        }
+    },
+
+    "KR_LSTMEmbeddings" : {
+        "compile" : {
+            "optimizer":"rmsprop", 
+            "loss": "mse",
+            "metrics": ["acc", "cosine_proximity"]
+        },
+        "fit": {
+            "shuffle": false,
+            "verbose": 1,
+            "epochs": 400,
+            "batch_size": 100
+        }
+    }
+
+}
+
+

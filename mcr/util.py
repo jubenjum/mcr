@@ -48,6 +48,21 @@ from keras import losses
 sys.stderr = stderr
 
 
+# import parameters used by dimension reduction algorithms
+import json
+
+def import_config():
+    """import the configuration for the dimension reduction in this file """
+    this_file = os.path.dirname(os.path.realpath(__file__))
+
+    with open( os.path.join(this_file, "algorithm.json")) as param:
+        config_ = json.load(param)
+
+    return config_
+
+config_ = import_config()
+
+
 # from https://docs.python.org/2/library/itertools.html#itertools.tee
 def grouper(iterable, n, fillvalue=None):
     "Collect data into fixed-length chunks or blocks"
@@ -101,6 +116,9 @@ class KR_LSMTEncoder:
         self.timesteps = self.feat_dim // input_dim  # frames
         self.input_dim = input_dim  # size of the features/nfilt
         self.labels = labels
+        
+        # the algorith's configuration from json 
+        self.config_ = config_["KR_LSMTEncoder"]
 
         # normalize and set nan as a mask
         self.features = normalize(features)
@@ -124,7 +142,7 @@ class KR_LSMTEncoder:
         # self.trn_generator = self._generator(self.training_data, 40)
         # self.val_generator = self._generator(self.validation_data, 40)
 
-    def _generator(self, data, n_batches=40):
+    def _generator(self, data, n_batches):
         for x in grouper(cycle(data), n_batches):
             yield np.array(x), np.array(x)
 
@@ -157,30 +175,31 @@ class KR_LSMTEncoder:
         """ Get the autoencoder saved with save_encoder """
         self.encoder = load_model(file_name)
 
+
+    def fit_generator(self):
+        args = {"validation_data":self.val_generator}
+        args.update(self.config_["fit_generator"])
+        self.history = self.autoencoder.fit_generator(
+            self.trn_generator, **args)
+
     def fit(self, n_dimensions):
         self.get_model(n_dimensions)
-        self.autoencoder.compile(optimizer='rmsprop',
-                                 loss='mse',
-                                 metrics=['acc'])
+        args = self.config_["compile"]
+        self.autoencoder.compile(**args)
 
-        #self.history = self.autoencoder.fit_generator(
-        #    self.trn_generator, steps_per_epoch=1000, epochs=1000,
-        #    validation_data=self.val_generator, validation_steps=40)
-
-        self.history = self.autoencoder.fit(self.training_data,
-                                            self.training_data, epochs=1000)
+        args = {"x": self.training_data, "y": self.training_data}
+        args.update(self.config_["fit"])
+        self.history = self.autoencoder.fit(**args)
 
         self.history_dict = self.history.history
         loss_values = self.history_dict['loss']
         acc_values = self.history_dict['acc']
-
 
     def reduce(self, *new_features):
         if new_features:
             return self.encoder.predict(new_features[0])
         else:
             return self.encoder.predict(self.features)
-
 
 
 def get_triples_indices(grouped, n):
@@ -250,6 +269,10 @@ class KR_TripletLoss(KR_LSMTEncoder):
     def __init__(self, features, labels, input_dim=20):
         KR_LSMTEncoder.__init__(self, features, labels, input_dim)
 
+        # the algorith's configuration from json 
+        self.config_ = config_["KR_TripletLoss"]
+
+
     def get_model(self, n_dimensions=20):
         self.input_shape = (self.timesteps, self.input_dim)
         base_input = Input(shape=self.input_shape)
@@ -275,13 +298,15 @@ class KR_TripletLoss(KR_LSMTEncoder):
         return embedding_model, triplet_model
 
     def fit(self, n_dimensions):
-	batch_size = 100
-	steps_per_epoch = 32
-	epochs = 200
+	batch_size = self.config_["fit_generator"]["batch_size"]
+	steps_per_epoch = self.config_["fit_generator"]["steps_per_epoch"]
+	epochs = self.config_["fit_generator"]["epochs"]
+        vebose = self.config_["fit_generator"]["verbose"]
         self.embedding_model, self.triplet_model = self.get_model(n_dimensions)
+        
         self.triplet_model.fit_generator(
               triplet_generator(self.training_data, self.training_labels, batch_size),
-              steps_per_epoch=steps_per_epoch, epochs=epochs, verbose=1)
+              steps_per_epoch=steps_per_epoch, epochs=epochs, verbose=verbose)
 
     def reduce(self, *new_features):
 	get_layer = K.function([self.embedding_model.layers[0].input], 
@@ -292,12 +317,12 @@ class KR_TripletLoss(KR_LSMTEncoder):
             return get_layer([self.features])[0]
 
 
-
 class KR_LSTMEmbeddings(KR_LSMTEncoder):
     
     def __init__(self, features, labels, input_dim=20):
         KR_LSMTEncoder.__init__(self, features, labels, input_dim)
 
+        self.config_ = config_["KR_LSTMEmbeddings"]
 
     def get_model(self, n_dimensions=20):
 	
@@ -314,16 +339,14 @@ class KR_LSTMEmbeddings(KR_LSMTEncoder):
 
 
     def fit(self, n_dimensions):
-	n_epochs = 400
-
         self.embedding_model = self.get_model(n_dimensions)
-        
-        self.embedding_model.compile(optimizer='rmsprop', loss='mse', 
-                                     metrics=['acc', 'cosine_proximity'])
+       
+        args = self.config_["compile"]
+        self.embedding_model.compile(**args)
 
-	self.embedding_model.fit(self.training_data, self.training_labels, 
-                              shuffle=False, verbose=1, epochs=n_epochs,
-                              batch_size=100)
+        args = {"x": self.training_data, "y": self.training_data}
+        args.update(self.config_['fit'])
+	self.embedding_model.fit(**args)
 
 
     def reduce(self, *new_features):
