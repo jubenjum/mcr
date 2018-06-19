@@ -60,6 +60,7 @@ def import_config():
 
     return config_
 
+
 config_ = import_config()
 
 
@@ -175,9 +176,8 @@ class KR_LSMTEncoder:
         """ Get the autoencoder saved with save_encoder """
         self.encoder = load_model(file_name)
 
-
     def fit_generator(self):
-        args = {"validation_data":self.val_generator}
+        args = {"validation_data": self.val_generator}
         args.update(self.config_["fit_generator"])
         self.history = self.autoencoder.fit_generator(
             self.trn_generator, **args)
@@ -205,7 +205,6 @@ class KR_LSMTEncoder:
 def get_triples_indices(grouped, n):
     '''balanced triplets'''
     num_classes = len(grouped) 
-    #print("\nnum_classes={} ... n={}\n".format(num_classes, n))
     positive_labels = np.random.randint(0, num_classes, size=n)
     negative_labels = (np.random.randint(1, num_classes, size=n) + positive_labels) % num_classes
     triples_indices = []
@@ -215,9 +214,7 @@ def get_triples_indices(grouped, n):
         m = len(positive_group)
         anchor_j = np.random.randint(0, m)
         anchor = positive_group[anchor_j]
-        #print("....m={} ...anchor_j={}".format(m, anchor_j))
         positive_j = 0 if m==1 else (np.random.randint(1, m) + anchor_j) % m
-        #print("{}".format(positive_j))
         positive = positive_group[positive_j]
 	triples_indices.append([anchor, positive, negative])
     
@@ -272,13 +269,12 @@ class KR_TripletLoss(KR_LSMTEncoder):
         # the algorith's configuration from json 
         self.config_ = config_["KR_TripletLoss"]
 
-
     def get_model(self, n_dimensions=20):
         self.input_shape = (self.timesteps, self.input_dim)
         base_input = Input(shape=self.input_shape)
         x = Masking(mask_value=0.0)(base_input)
         x = LSTM(n_dimensions, return_sequences=False)(x)
-        # x = Dense(2, activation='linear')(x)
+        # x = Dense(2, activation='linear')(x)  # projecting in a 2D 
         embedding_model = Model(base_input, x, name='embedding')
         
         anchor_input = Input(self.input_shape, name='anchor_input')
@@ -293,7 +289,8 @@ class KR_TripletLoss(KR_LSMTEncoder):
         outputs = [anchor_embedding, positive_embedding, negative_embedding]
         triplet_model = Model(inputs, outputs)
         triplet_model.add_loss(K.mean(triplet_loss(outputs)))
-        triplet_model.compile(loss=None, optimizer='rmsprop')
+        args = self.config_["compile"]
+        triplet_model.compile(**args)
 
         return embedding_model, triplet_model
 
@@ -303,7 +300,7 @@ class KR_TripletLoss(KR_LSMTEncoder):
 	epochs = self.config_["fit_generator"]["epochs"]
         vebose = self.config_["fit_generator"]["verbose"]
         self.embedding_model, self.triplet_model = self.get_model(n_dimensions)
-        
+       
         self.triplet_model.fit_generator(
               triplet_generator(self.training_data, self.training_labels, batch_size),
               steps_per_epoch=steps_per_epoch, epochs=epochs, verbose=verbose)
@@ -337,7 +334,6 @@ class KR_LSTMEmbeddings(KR_LSMTEncoder):
         
 	return embedding_model
 
-
     def fit(self, n_dimensions):
         self.embedding_model = self.get_model(n_dimensions)
        
@@ -348,14 +344,14 @@ class KR_LSTMEmbeddings(KR_LSMTEncoder):
         args.update(self.config_['fit'])
 	self.embedding_model.fit(**args)
 
-
     def reduce(self, *new_features):
-	get_layer = K.function([self.embedding_model.layers[0].input], [self.embedding_model.layers[2].output])
+	get_layer = K.function([self.embedding_model.layers[0].input], 
+                               [self.embedding_model.layers[2].output])
+
         if new_features:
             return get_layer([new_features[0]])[0]
         else:
             return get_layer([self.features])[0]
-
 
 
 ## autoencoder https://blog.keras.io/building-autoencoders-in-keras.html
@@ -365,6 +361,7 @@ class KR_AutoEncoder:
         self.features = features
         self.labels = labels
         self.num_feat, self.feat_dim = features.shape
+        self.config_ = config_["compile"]
 
     def fit(self, n_dimensions):
         self.n_dimensions = n_dimensions
@@ -388,17 +385,19 @@ class KR_AutoEncoder:
         # this model maps an input to its encoded representation
         self.encoder = Model(input_call, encoded)
 
-        epochs = 1000
+        epochs = self.config_["fit"]["epochs"]
         #self.autoencoder.compile(optimizer='adadelta', loss='mse')
-        self.autoencoder.compile(optimizer='rmsprop', loss='mse')
+        args = self.config_["compile"]
+        self.autoencoder.compile(**args)
 
         stop_callback = [EarlyStopping(monitor='val_loss',
-                                       patience=epochs//10, verbose=0), ]
-        self.autoencoder.fit(self.features, self.features,
-                             shuffle=False,
-                             epochs=epochs,
-                             callbacks=stop_callback,
-                             validation_data=(self.features, self.features))
+                                       patience=epochs//10, verbose=0),]
+
+        args = {"x": self.features, "y": self.features, 
+                "validation_data": (self.features, self.features),
+                "callbacks": stop_callback}
+        args.update(self.config_['fit'])
+        self.autoencoder.fit(**args)
 
     def decode(self):
         # create a placeholder for an encoded (32-dimensional) input
@@ -409,7 +408,6 @@ class KR_AutoEncoder:
 
         # create the decoder model
         decoder = Model(encoded_input, decoder_layer(encoded_input))
-
 
     def reduce(self):
         return self.encoder.predict(self.features)

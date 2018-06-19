@@ -31,7 +31,6 @@ warnings.filterwarnings("ignore")
 np.seterr(all='raise')
 np.seterr(under="ignore")
 
-
 memory = build_cache()
 
 __all__ = ['dimension_reduction']
@@ -176,11 +175,11 @@ def main():
     parser.add_argument('--standard_scaler', action='store_true', default=False, required=False,
             help='scale the features')
 
-    parser.add_argument('-r', '--reduction', 
-            help=('use dimension reduction, ' 
-                  'valid methods are raw, pca,lda, lsa, tsne, ae [autoencoder], '
-                  'lstm, lstmembed and tripletloss, these two last methods '
-                  'gives embeddings'))
+    help_reduction = """use dimension reduction, valid methods are raw, pca, 
+    lda, lsa, tsne, ae [autoencoder], lstm, lstmembed and tripletloss, 
+    these two last methods gives embeddings"""
+
+    parser.add_argument('-r', '--reduction', help=help_reduction)
 
     args = parser.parse_args()
     data_file = args.features_source

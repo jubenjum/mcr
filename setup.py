@@ -30,9 +30,12 @@ setup(
     packages=['mcr'],
     #package_dir={'': 'src'},
 
-    include_package_data=True,
     install_requires=requirements,
     dependency_links=dependency_links,
+    
+    include_package_data=True,
+    data_files=[('config', ['mcr/algorithm.json'])],
+
 
     license="GPLv3",
     zip_safe=False,
