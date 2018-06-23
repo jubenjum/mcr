@@ -34,7 +34,7 @@ setup(
     dependency_links=dependency_links,
     
     include_package_data=True,
-    data_files=[('config', ['mcr/algorithm.json'])],
+    data_files=[('config', ['mcr/algorithms.json'])],
 
 
     license="GPLv3",
