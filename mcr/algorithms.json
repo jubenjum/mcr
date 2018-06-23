@@ -7,7 +7,7 @@
         },
 
 	    "fit" : {
-	    	"epochs": 1000,
+	    	"epochs": 2000,
             "verbose": 1
 	    },
 
@@ -24,8 +24,8 @@
         "fit_generator": {
             "batch_size": 100,
             "steps_per_epoch": 32,
-            "epochs": 200,
-            "verbose":1
+            "epochs": 1000,
+            "verbose": 1
         },
 
         "compile" : {

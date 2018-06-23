@@ -59,7 +59,7 @@ def save_features(fname, features, labels, sep=','):
     df.to_csv(fname, sep=sep)
 
 
-@memory.cache
+#@memory.cache
 def get_features(features_params, call_intervals, read_labels):
     ''' get_features reads the wav files and returns the features
     for the selected intervals from the annotation file

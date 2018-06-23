@@ -9,7 +9,7 @@ import sys
 import os.path
 import os
 from collections import defaultdict 
-
+from pathlib2 import Path
 
 from time import time
 from contextlib import contextmanager
@@ -53,12 +53,23 @@ import json
 
 def import_config():
     """import the configuration for the dimension reduction in this file """
-    this_file = os.path.dirname(os.path.realpath(__file__))
+    module_dir = os.path.dirname(os.path.realpath(__file__))
+    running_dir = os.getcwd()
 
-    with open( os.path.join(this_file, "algorithm.json")) as param:
-        config_ = json.load(param)
+    module_file = Path(os.path.join(module_dir, "algorithms.json"))
+    running_file = Path(os.path.join(running_dir, "algorithms.json"))
 
-    return config_
+    def rfile(f):
+        with f.open() as param:
+            config_ = json.load(param)
+        return config_
+
+    if running_file.is_file():
+        return rfile(running_file)
+    elif module_file.is_file():
+        return rfile(module_file)
+    else:
+        raise IOError, "No such file 'algorithms.json'" 
 
 
 config_ = import_config()
@@ -303,7 +314,7 @@ class KR_TripletLoss(KR_LSMTEncoder):
        
         self.triplet_model.fit_generator(
               triplet_generator(self.training_data, self.training_labels, batch_size),
-              steps_per_epoch=steps_per_epoch, epochs=epochs, verbose=verbose)
+              steps_per_epoch=steps_per_epoch, epochs=epochs)
 
     def reduce(self, *new_features):
 	get_layer = K.function([self.embedding_model.layers[0].input], 
