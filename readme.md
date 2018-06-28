@@ -10,7 +10,7 @@ Support of feature extraction and dimension reduction
 * Classification and decoding of calls in isolation
 * Automatic transcription of audio files
 * Feature extraction and dimension reduction
-* Parsing [Praat](en paredes que se mueven) TextGrid files
+* Parsing [Praat](http://www.fon.hum.uva.nl/praat/) TextGrid files
 
 
 ## Installation
