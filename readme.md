@@ -1,5 +1,6 @@
 # Monkey Call Recognition & Features extraction
 [![Build Status](https://travis-ci.org/primatelang/mcr.svg?branch=master)](https://travis-ci.org/primatelang/mcr)
+[![Anaconda-Server Badge](https://anaconda.org/primatelang/mcr/badges/installer/conda.svg)](https://conda.anaconda.org/primatelang)
 
 Python code for training, decoding, and evaluating an automatic monkey call recognizer. 
 Support of feature extraction and dimension reduction
