@@ -13,7 +13,7 @@ Support of feature extraction and dimension reduction
 * Parsing [Praat](http://www.fon.hum.uva.nl/praat/) TextGrid files
 
 
-## Installation
+## Installation
 
 For installing the mcr package you will require a python 2.7 distribution in your system. 
 You can install *mcr* by selecting one of the following methods: 
