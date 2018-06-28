@@ -10,7 +10,7 @@ except ImportError:
     from distutils.extension import Extension
 
 
-readme = open('README.rst').read()
+readme = open('readme.md').read()
 
 
 requirements = [  ]
