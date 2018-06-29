@@ -20,7 +20,10 @@ For installing the mcr package you will require a python 2.7 distribution in you
 You can install *mcr* by selecting one of the following methods: 
 
 ### Method 1: virtualenv + pip + setup
-Install python 2.7.x using your system's package manager.
+Install python 2.7.x using your system's package manager. First you will need to 
+get this package:
+
+    $ git clone https://github.com/primatelang/mcr
 
 Optionally, install virtualenv to keep separate the required packages and then do:
 
@@ -28,6 +31,7 @@ Optionally, install virtualenv to keep separate the required packages and then d
 
 Next, install the required packages:
 
+    $ cd mcr
     $ pip install -r requirements.txt
 
 Finally run the installation script:
@@ -37,7 +41,7 @@ Finally run the installation script:
 And you're good to go.
 
 ### Method 2 : anaconda
-Follow the instructions from [anacondawebpage](https://www.anaconda.com/download/) 
+Follow the instructions from [anaconda webpage](https://www.anaconda.com/download/) 
 to install a suitable distribution for your system. The supported architectures of
 this module are Linux and OSX. Once anaconda installed on your system, you can
 follow these commands:
