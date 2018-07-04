@@ -37,11 +37,12 @@ __all__ = ['dimension_reduction']
 
 REDUCTION_METHODS = ['PCA', 'LDA', 'RAW', 'TSNE', 'AE', 'LSA', 'LSTM', 'LSTMEMBED', 'TRIPLETLOSS']
 MATRIX_METHODS = ['PCA', 'LDA', 'TSNE']
-
+NN_METHODS = ['AE', 'LSTM', 'LSTMEMBED', 'TRIPLETLOSS']
 
 @memory.cache
-def dimension_reduction(features, labels, red_method, new_dimension,
-                        standard_scaler=False, config=None):
+def dimension_reduction(features, labels, red_method, new_dimension, max_frames=0,
+                        save_model=False, standard_scaler=False, output_csv='', 
+                        pretrained='', config=None):
     """dimesion_deduction is function that a wraps PCA, LDA, TSNE, LSA, LSTM, 
     LSTMEMBED, and TRIPLETLOSS-embeddings dimension reduction methods
 
@@ -67,6 +68,12 @@ def dimension_reduction(features, labels, red_method, new_dimension,
         fix length features and  'AE', 'LSTM', 'LSTMEMBED', and 
         'TRIPLETLOSS' can be used with variable length features
     
+    max_frames :  [int, optional]
+        The maximum number of frames to pass into NN models, if used this 
+        argument it should be the maximum number of frames that you will
+        expect to have in the future features and it must be higher that
+        that from the features
+    
     new_dimension : [Integer]
         the new dimension of the features, it should be lower that
         the original feature dimension
@@ -75,7 +82,18 @@ def dimension_reduction(features, labels, red_method, new_dimension,
         Apply the standar scale to all features using scikit-learn StandardScaler
         function
 
+    output_csv : [string, optional]
+        The results output csv name, it is only used to set the 
+        name of the saved NN model 
 
+    pretrained : [string, optional]
+        The file name of the keras NN model that will be used to predict the 
+        encodings or embedding, and it is specific for the reduction method
+        used to build it.
+
+    config :  [Dict, optional]
+        parameters set on the configuration file. 
+    
     Returns
     -------
     shrinked_features : [list of np.ndarray] 
@@ -97,6 +115,14 @@ def dimension_reduction(features, labels, red_method, new_dimension,
 
     # FEATURES feature reduction
     X_feat = pd.DataFrame(features).values
+    n_rows, n_cols = X_feat.shape
+    if max_frames != 0:
+        if (max_frames - n_cols) < 0:
+            raise ValueError, "max_frames should be higher than # features" 
+        exten = np.empty([n_rows, max_frames - n_cols])
+        exten[:] = np.nan 
+        X_feat = np.append(X_feat, exten, axis=1)
+
     labels = np.array(labels)
     is_matrix = False if np.object == X_feat.dtype else True
 
@@ -128,23 +154,54 @@ def dimension_reduction(features, labels, red_method, new_dimension,
 
     elif red_method == 'LSTM' and is_matrix:
         kr_lstm = KR_LSMTEncoder(X_feat, labels, input_dim)
-        kr_lstm.fit(n_dimensions=new_dimension)
-        #kr_lstm.save_data('spectral_features_variable_window.hdf5')
+        
+        if pretrained:
+            kr_lstm.load_encoder(pretrained)
+        else:
+            kr_lstm.fit(n_dimensions=new_dimension)
+        
+        if save_model:
+            kr_lstm.save_encoder('{}.hdf5'.format(output_csv))
+        
         shrinked_features = kr_lstm.reduce()
     
     elif red_method == 'LSTMEMBED' and is_matrix:
         kr_lstmemb = KR_LSTMEmbeddings(X_feat, labels)
-        kr_lstmemb.fit(n_dimensions=new_dimension)
+        
+        if pretrained:
+            kr_lstmemb.load_encoder(pretrained)
+        else:
+            kr_lstmemb.fit(n_dimensions=new_dimension)
+        
+        if save_model:
+            kr_lstmemb.save_encoder('{}.hdf5'.format(output_csv))
+        
         shrinked_features = kr_lstmemb.reduce()
 
     elif red_method == 'AE' and is_matrix:
         kr_ae = KR_AutoEncoder(X_feat, labels)
-        kr_ae.fit(n_dimensions=new_dimension)
+
+        if pretrained:
+            kr_ae.load_encoder(pretrained)
+        else:
+            kr_ae.fit(n_dimensions=new_dimension)
+
+        if save_model:
+            kr_ae.save_encoder('{}.hdf5'.format(output_csv))
+        
         shrinked_features = kr_ae.reduce()
 
     elif red_method == 'TRIPLETLOSS' and is_matrix:
         kr_tl = KR_TripletLoss(X_feat, labels)
-        kr_tl.fit(n_dimensions=new_dimension)
+
+        if pretrained:
+            kr_tl.load_encoder(pretrained)
+        else:
+            kr_tl.fit(n_dimensions=new_dimension)
+
+        if save_model:
+            kr_tl.save_encoder('{}.hdf5'.format(output_csv))
+
         shrinked_features = kr_tl.reduce()
     
     else:  # default = raw
@@ -164,16 +221,25 @@ def main():
                                      description='prepare the csv or abx files to compute ABX score')
 
     parser.add_argument('features_source', 
-            help='csv file contining hte features')
+            help='csv file with the features')
 
     parser.add_argument('algorithm_config', 
-            help='algorithm configuration file for the feature extration')
+            help='algorithm configuration file for the feature extraction')
 
     parser.add_argument('-o', '--out_csv', required=True, 
             help='output features and labels in csv format')
 
+    parser.add_argument('-m', '--max_frames', required=False, default=0, 
+            help='max number of frames when training the RNN')
+
     parser.add_argument('--standard_scaler', action='store_true', default=False, required=False,
             help='scale the features')
+
+    parser.add_argument('--save_model', default=False, action='store_true', required=False,
+            help='save keras trained model')
+
+    parser.add_argument('--pretrained', required=False,
+            help='load pretrained NN model that will be use to do the dimension reduction')
 
     help_reduction = """use dimension reduction, valid methods are raw, pca, 
     lda, lsa, tsne, ae [autoencoder], lstm, lstmembed and tripletloss, 
@@ -187,6 +253,9 @@ def main():
     config_file = args.algorithm_config
     output_csv = args.out_csv
     standard_scaler = args.standard_scaler
+    save_model = args.save_model
+    pretrained = args.pretrained
+    max_frames = int(args.max_frames)
 
     # CONFIGURATION
     config = load_config(config_file)
@@ -210,8 +279,12 @@ def main():
     else: # default method is None that will trigger the raw dimension reduction
        red_method = None
 
+    if pretrained and red_method not in NN_METHODS:
+        print('valid pretrained models are: {}, given {}'.format(NN_METHODS, red_method))
+        sys.exit()
+
     # Read features file, the format of the file is simple, it is a csv without
-    # header and with the folloging data-fields:
+    # header and with the following data-fields:
     #
     # label1,f11,f12,f13, .. f1J-1,f1J 
     # ....
@@ -234,8 +307,9 @@ def main():
 
     # Apply feature reduction
     features, labels = dimension_reduction(features_from_csv, labels_from_csv,
-                                           red_method, new_dimension,
-                                           standard_scaler, config)
+                                           red_method, new_dimension, max_frames,
+                                           save_model, standard_scaler, output_csv, 
+                                           pretrained, config)
     
     # write out the reduced dimension into a new file
     with open(output_csv, 'w') as emb_csv:

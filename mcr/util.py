@@ -181,7 +181,11 @@ class KR_LSMTEncoder:
         >> model = load_model('my_model.h5')
 
         """
-        self.encoder.save("{}".format(file_name))
+        hd5file = "{}".format(file_name)
+        _file = Path(hd5file)
+        if _file.is_file():
+            os.remove(hd5file)
+        self.encoder.save(hd5file)
 
     def load_encoder(self, file_name):
         """ Get the autoencoder saved with save_encoder """
@@ -315,7 +319,24 @@ class KR_TripletLoss(KR_LSMTEncoder):
         self.triplet_model.fit_generator(
               triplet_generator(self.training_data, self.training_labels, batch_size),
               steps_per_epoch=steps_per_epoch, epochs=epochs)
+    
+    def save_encoder(self, file_name):
+        """ save the encoder LSTM in h5 format using keras save function, to
+        get the model back use
 
+        >> model = load_model('my_model.h5')
+
+        """
+        hd5file = "{}".format(file_name)
+        _file = Path(hd5file)
+        if _file.is_file():
+            os.remove(hd5file)
+        self.embedding_model.save(hd5file)
+
+    def load_encoder(self, file_name):
+        """ Get the autoencoder saved with save_encoder """
+        self.embedding_model = load_model(file_name)
+    
     def reduce(self, *new_features):
 	get_layer = K.function([self.embedding_model.layers[0].input], 
                                [self.embedding_model.layers[2].output])
@@ -355,6 +376,23 @@ class KR_LSTMEmbeddings(KR_LSMTEncoder):
         args.update(self.config_['fit'])
 	self.embedding_model.fit(**args)
 
+    def save_encoder(self, file_name):
+        """ save the encoder lstmembeddings in h5 format using keras save function, 
+        to get the model back use
+
+        >> model = load_model('my_model.h5')
+
+        """
+        hd5file = "{}".format(file_name)
+        _file = path(hd5file)
+        if _file.is_file():
+            os.remove(hd5file)
+        self.embedding_model.save(hd5file)
+
+    def load_encoder(self, file_name):
+        """ Get the autoencoder saved with save_encoder """
+        self.embedding_model = load_model(file_name)
+    
     def reduce(self, *new_features):
 	get_layer = K.function([self.embedding_model.layers[0].input], 
                                [self.embedding_model.layers[2].output])
@@ -420,6 +458,23 @@ class KR_AutoEncoder:
         # create the decoder model
         decoder = Model(encoded_input, decoder_layer(encoded_input))
 
+    def save_encoder(self, file_name):
+        """ save the encoder lstmembeddings in h5 format using keras save function, 
+        to get the model back use
+
+        >> model = load_model('my_model.h5')
+
+        """
+        hd5file = "{}".format(file_name)
+        _file = path(hd5file)
+        if _file.is_file():
+            os.remove(hd5file)
+        self.encoder.save(hd5file)
+
+    def load_encoder(self, file_name):
+        """ Get the autoencoder saved with save_encoder """
+        self.encoder = load_model(file_name)
+    
     def reduce(self):
         return self.encoder.predict(self.features)
 

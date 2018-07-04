@@ -192,4 +192,17 @@ and using the RNN auto-encoder (LSTM):
 The output is *lstm.csv* file, the output is a csv-file that contains in
 the first column the *label* and the rest of columns are the shrinked features.
 
+If you are training NN models: AE, LSTM, TRIPLETLOSS and LSTMEMBED, you can
+keep the trained network and re-use it with new data, the command line to train
+and store the NN from the previous example will be:
+
+    $ reduce_features features.csv extraction.cfg -r LSTM --save_model -o lstm.csv 
+
+And the model will be stored on the file `lstm.csv.hdf5`, and to re-use the model you
+can use a command line:
+
+    $ reduce_features features.csv extraction.cfg -r LSTM --pretrained lstm.csv.hdf5 -o lstm.csv
+
+where features.csv can be a new set of features or the old ones.
+
 For more information about how to use the scripts, see their help messages.
